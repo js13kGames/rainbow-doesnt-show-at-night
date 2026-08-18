@@ -1,0 +1,9 @@
+export type Transform = { x: number; y: number; scale: number; rotation: number }
+export type Sprite = {
+  r: number
+  r2?: number
+  oy?: number
+  flip: number
+  cell?: { x: number; y: number }
+  color?: [number, number, number]
+}
