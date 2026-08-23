@@ -5,6 +5,7 @@ import { MAP, isWalkableBox } from '../components/map.ts'
 export function createCollisionSystem(): System {
   return (world, dt) => {
     world.query('transform', 'velocity', 'collider').forEach((e) => {
+      if (world.has(e, 'jump')) return
       const transform = world.get<Transform>(e, 'transform')!
       const velocity = world.get<Velocity>(e, 'velocity')!
       const collider = world.get<Collider>(e, 'collider')!

@@ -2,6 +2,7 @@ import { World } from './core/world.ts'
 import { createRenderer } from './core/renderer.ts'
 import { createRenderSystem } from './core/render-system.ts'
 import { createMovementSystem } from './systems/movement.ts'
+import { createJumpSystem } from './systems/jump.ts'
 // import { createAiSystem } from './systems/ai.ts' // Temporarily disabled to stop enemy movement
 import { createWobbleSystem } from './systems/wobble.ts'
 import { createSquashSystem } from './systems/squash.ts'
@@ -87,6 +88,7 @@ world.spawn({
 })
 
 world.addSystem(createMovementSystem())
+world.addSystem(createJumpSystem(playerPos.x, playerPos.y))
 world.addSystem(createCollisionSystem())
 // Temporarily disable to stop enemy movement
 // world.addSystem(createAiSystem())
