@@ -90,6 +90,7 @@ export class World {
   private tick = (now: number) => {
     let dt = (now - this.last) / 1000
     if (dt > 0.1) dt = 0.1
+    if (dt < 0) dt = 0
     this.last = now
 
     for (let i = this.timers.length - 1; i >= 0; i--) {

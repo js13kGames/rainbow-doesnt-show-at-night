@@ -1,5 +1,5 @@
 import type { System } from '../core/types.ts'
-import type { Transform } from '../core/components.ts'
+import type { Transform, Velocity } from '../core/components.ts'
 import type { Player } from '../components/index.ts'
 
 const keys = new Set<string>()
@@ -13,16 +13,14 @@ export const moveTransform = (t: Transform, dx: number, dy: number, speed: numbe
 })
 
 export function createMovementSystem(): System {
-  return (world, dt) => {
+  return (world) => {
     const dx = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0)
     const dy = (keys.has('s') ? 1 : 0) - (keys.has('w') ? 1 : 0)
-    if (dx === 0 && dy === 0) return
-    const len = Math.hypot(dx, dy)
-    world.query('transform', 'player').forEach((e) => {
+    const len = Math.hypot(dx, dy) || 1
+    world.query('velocity', 'player').forEach((e) => {
       const player = world.get<Player>(e, 'player')!
       const s = keys.has('shift') ? player.runSpeed : player.walkSpeed
-      const transform = world.get<Transform>(e, 'transform')!
-      world.add(e, 'transform', moveTransform(transform, dx / len, dy / len, s, dt))
+      world.add(e, 'velocity', { dx: (dx / len) * s, dy: (dy / len) * s } satisfies Velocity)
     })
   }
 }

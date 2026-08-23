@@ -94,7 +94,7 @@ export function createRenderer(canvas: HTMLCanvasElement) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     atlasReady = true
   }
-  img.src = '/8bit.png'
+  img.src = '/sprite-sheet.png'
 
   return {
     drawScene(
@@ -105,13 +105,13 @@ export function createRenderer(canvas: HTMLCanvasElement) {
         r: number
         r2?: number
         flip: number
-        cell?: { x: number; y: number }
+        cell?: { x: number; y: number; w?: number; h?: number }
         color?: [number, number, number]
       }[],
     ) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null)
       gl.viewport(0, 0, canvas.width, canvas.height)
-      gl.clearColor(0.5, 0.5, 0.5, 1)
+      gl.clearColor(0x24 / 255, 0x9f / 255, 0xde / 255, 1)
       gl.clear(gl.COLOR_BUFFER_BIT)
 
       if (!atlasReady || sprites.length === 0) return
@@ -134,8 +134,8 @@ export function createRenderer(canvas: HTMLCanvasElement) {
           gl.uniform1i(spriteUniforms.useColor, 0)
           const u0 = (s.cell!.x * CELL) / SHEET
           const v0 = (s.cell!.y * CELL) / SHEET
-          const u1 = u0 + CELL / SHEET
-          const v1 = v0 + CELL / SHEET
+          const u1 = u0 + (CELL * (s.cell!.w ?? 1)) / SHEET
+          const v1 = v0 + (CELL * (s.cell!.h ?? 1)) / SHEET
           gl.uniform4f(spriteUniforms.uvRect, u0, v0, u1, v1)
         }
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
