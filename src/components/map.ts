@@ -16,6 +16,9 @@ export const MAP: number[][] = [
   '1111111111',
 ].map((row) => row.split('').map(Number))
 
+export const MAP_W = MAP[0]!.length * TILE_W
+export const MAP_H = MAP.length * GRID_H
+
 const isGreenAt = (map: number[][], px: number, py: number): boolean => {
   const col = Math.floor(px / TILE_W)
   const row = Math.floor(py / GRID_H)

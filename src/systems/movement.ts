@@ -18,9 +18,8 @@ export function createMovementSystem(): System {
     const dy = (keys.has('s') ? 1 : 0) - (keys.has('w') ? 1 : 0)
     const len = Math.hypot(dx, dy) || 1
     world.query('velocity', 'player').forEach((e) => {
-      const player = world.get<Player>(e, 'player')!
-      const s = keys.has('shift') ? player.runSpeed : player.walkSpeed
-      world.add(e, 'velocity', { dx: (dx / len) * s, dy: (dy / len) * s } satisfies Velocity)
+      const { speed } = world.get<Player>(e, 'player')!
+      world.add(e, 'velocity', { dx: (dx / len) * speed, dy: (dy / len) * speed } satisfies Velocity)
     })
   }
 }

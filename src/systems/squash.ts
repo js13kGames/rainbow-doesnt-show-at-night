@@ -1,4 +1,5 @@
-import type { System } from '../core/types.ts'
+import type { System, Entity } from '../core/types.ts'
+import type { World } from '../core/world.ts'
 import type { Sprite } from '../core/components.ts'
 import type { Squash } from '../components/index.ts'
 
@@ -7,19 +8,14 @@ const DECAY = 10 // 1/s
 const FREQ = 15 // rad/s
 const CUTOFF = 0.6 // s
 
-const keys = new Set<string>()
-window.addEventListener('keydown', (e) => keys.add(e.key))
+export function createSquashSystem(world: World): System {
+  world.on('land', (e: Entity) => {
+    if (world.has(e, 'squash')) return
+    const s = world.get<Sprite>(e, 'sprite')!
+    world.add(e, 'squash', { t: 0, base: s.r2 ?? s.r } satisfies Squash)
+  })
 
-export function createSquashSystem(): System {
   return (world, dt) => {
-    world.query('player', 'sprite').forEach((e) => {
-      if (keys.has(' ') && !world.has(e, 'squash')) {
-        const s = world.get<Sprite>(e, 'sprite')!
-        world.add(e, 'squash', { t: 0, base: s.r2 ?? s.r } satisfies Squash)
-      }
-      keys.delete(' ')
-    })
-
     world.query('sprite', 'squash').forEach((e) => {
       const s = world.get<Sprite>(e, 'sprite')!
       const sq = world.get<Squash>(e, 'squash')!

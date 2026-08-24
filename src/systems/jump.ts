@@ -48,6 +48,7 @@ export function createJumpSystem(spawnX: number, spawnY: number): System {
         const landed = isWalkableBox(MAP, x, y, collider.hw, collider.hh, collider.oy)
         world.add(e, 'transform', landed ? { ...t, x, y } : { ...t, x: spawnX, y: spawnY })
         world.remove(e, 'jump')
+        world.emit('land', e)
         return
       }
 
