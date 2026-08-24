@@ -8,7 +8,7 @@ export const TILE_H = 24 * SCALE
 export const GRID_H = 16 * SCALE
 export const PLATFORM_CELL = { x: 1, y: 1, w: 1, h: 1.5 }
 
-export const MAP: number[][] = [
+export const DAY_MAP: number[][] = [
   '0000000000',
   '0000011010',
   '0001111000',
@@ -16,8 +16,20 @@ export const MAP: number[][] = [
   '1111111111',
 ].map((row) => row.split('').map(Number))
 
-export const MAP_W = MAP[0]!.length * TILE_W
-export const MAP_H = MAP.length * GRID_H
+// night layout drops the elevated platforms — standing on one when toggling makes you fall
+export const NIGHT_MAP: number[][] = [
+  '0000000000',
+  '0000000000',
+  '0001111000',
+  '0000000000',
+  '1111111111',
+].map((row) => row.split('').map(Number))
+
+export let MAP = DAY_MAP
+export const setActiveMap = (night: boolean) => (MAP = night ? NIGHT_MAP : DAY_MAP)
+
+export const MAP_W = DAY_MAP[0]!.length * TILE_W
+export const MAP_H = DAY_MAP.length * GRID_H
 
 const isGreenAt = (map: number[][], px: number, py: number): boolean => {
   const col = Math.floor(px / TILE_W)

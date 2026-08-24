@@ -7,7 +7,8 @@ import { createWobbleSystem } from './systems/wobble.ts'
 import { createSquashSystem } from './systems/squash.ts'
 import { createCollisionSystem } from './systems/collision.ts'
 import { createCloudSystem } from './systems/cloud.ts'
-import { MAP, TILE_W, TILE_H, GRID_H, PLATFORM_CELL } from './components/map.ts'
+import { initNightToggle, createNightSystem, spawnPlatforms } from './systems/night.ts'
+import { MAP, TILE_W, GRID_H } from './components/map.ts'
 import type { Transform, Sprite, Velocity, Collider } from './core/components.ts'
 import type { Player, Wobble, Cloud } from './components/index.ts'
 
@@ -32,20 +33,12 @@ for (let i = 0; i < CLOUD_COUNT; i++) {
   const scale = 0.4 + depth * 1.4
   world.spawn({
     transform: { x: slotW * i + Math.random() * slotW, y: canvas.height * (0.05 + depth * 0.75), scale: 1, rotation: 0 } satisfies Transform,
-    sprite: { r: 40 * scale, r2: 20 * scale, flip: Math.random() < 0.5 ? -1 : 1, cell: { x: 2, y: 2, w: 2, h: 1 } } satisfies Sprite,
+    sprite: { r: 40 * scale, r2: 20 * scale, flip: Math.random() < 0.5 ? -1 : 1, cell: { x: 0, y: 3, w: 2, h: 1 } } satisfies Sprite,
     cloud: { speed: 15 + depth * 15 } satisfies Cloud,
   })
 }
 
-MAP.forEach((row, r) =>
-  row.forEach((tile, c) => {
-    if (tile !== 1) return
-    world.spawn({
-      transform: { x: c * TILE_W + TILE_W / 2, y: r * GRID_H + TILE_H / 2, scale: 1, rotation: 0 } satisfies Transform,
-      sprite: { r: TILE_W / 2, r2: TILE_H / 2, flip: 1, cell: PLATFORM_CELL } satisfies Sprite,
-    })
-  }),
-)
+spawnPlatforms(world, MAP)
 
 world.spawn({
   transform: { x: playerPos.x, y: playerPos.y, scale: 1, rotation: 0 } satisfies Transform,
@@ -62,6 +55,8 @@ world.addSystem(createJumpSystem(playerPos.x, playerPos.y))
 world.addSystem(createCollisionSystem())
 world.addSystem(createWobbleSystem())
 world.addSystem(createSquashSystem(world))
+world.addSystem(createNightSystem())
 world.addSystem(createRenderSystem(renderer, canvas))
+initNightToggle(world, playerPos.x, playerPos.y)
 world.start()
 requestAnimationFrame(() => (canvas.style.opacity = '1'))

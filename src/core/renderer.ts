@@ -76,9 +76,13 @@ export function createRenderer(canvas: HTMLCanvasElement) {
         flip: number
         cell?: { x: number; y: number; w?: number; h?: number }
       }[],
+      colorT = 0, // 0=day sky, 1=night — lerped for a smooth background transition
     ) {
       gl.viewport(0, 0, canvas.width, canvas.height)
-      gl.clearColor(0x24 / 255, 0x9f / 255, 0xde / 255, 1)
+      const day = [0x24, 0x9f, 0xde]
+      const nightCol = [0x14, 0x10, 0x13]
+      const [cr, cg, cb] = day.map((d, i) => d + (nightCol[i]! - d) * colorT)
+      gl.clearColor(cr! / 255, cg! / 255, cb! / 255, 1)
       gl.clear(gl.COLOR_BUFFER_BIT)
 
       if (!atlasReady) return

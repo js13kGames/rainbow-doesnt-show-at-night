@@ -2,6 +2,7 @@ import type { System } from './types.ts'
 import type { Transform, Sprite } from './components.ts'
 import type { createRenderer } from './renderer.ts'
 import { MAP_W, MAP_H } from '../components/map.ts'
+import { colorT } from '../systems/night.ts'
 
 export function createRenderSystem(renderer: ReturnType<typeof createRenderer>, canvas: HTMLCanvasElement): System {
   return (world) => {
@@ -15,7 +16,8 @@ export function createRenderSystem(renderer: ReturnType<typeof createRenderer>, 
       const isBg = world.has(e, 'cloud')
       return { ...t, ...s, x: t.x + (isBg ? 0 : offsetX), y: t.y + (isBg ? 0 : offsetY) + (s.oy ?? 0) }
     })
+    sprites.sort((a, b) => (a.layer ?? 0) - (b.layer ?? 0))
 
-    renderer.drawScene(sprites)
+    renderer.drawScene(sprites, colorT)
   }
 }
