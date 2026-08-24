@@ -1,39 +1,10 @@
+// uniform names are kept to 1 char: GLSL source is a JS string, so terser can't mangle it —
+// every char here is a byte in the final bundle, unlike normal identifiers which get minified for free
 const spriteVert = `#version 300 es
-layout(location=0) in vec2 a_pos;
-uniform vec2 u_resolution;
-uniform vec2 u_center;
-uniform vec2 u_size;
-uniform float u_rotation;
-uniform float u_flip;
-uniform vec4 u_uvRect;
-out vec2 v_uv;
-void main() {
-  vec2 pivotLocal = vec2(0.0, 0.0);
-  vec2 local = vec2(a_pos.x * u_flip, a_pos.y) - pivotLocal;
-  float c = cos(u_rotation), s = sin(u_rotation);
-  vec2 rotated = mat2(c, s, -s, c) * (local * u_size);
-  vec2 p = rotated + pivotLocal * u_size + u_center;
-  vec2 clip = (p / u_resolution) * 2.0 - 1.0;
-  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-  v_uv = mix(u_uvRect.xy, u_uvRect.zw, a_pos * 0.5 + 0.5);
-}`
+layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x,u;uniform vec2 o;out vec2 v;void main(){float k=cos(o.x),n=sin(o.x);vec2 q=mat2(k,n,-n,k)*(vec2(a.x*o.y,a.y)*x.zw)+x.xy;vec2 e=q/r*2.-1.;gl_Position=vec4(e.x,-e.y,0,1);v=mix(u.xy,u.zw,a*.5+.5);}`
 
 const spriteFrag = `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-uniform sampler2D u_atlas;
-uniform int u_useColor;
-uniform vec3 u_color;
-out vec4 outColor;
-void main() {
-  if (u_useColor == 1) {
-    outColor = vec4(u_color, 1.0);
-    return;
-  }
-  vec4 c = texture(u_atlas, v_uv);
-  if (c.a < 0.5) discard;
-  outColor = c;
-}`
+precision mediump float;in vec2 v;uniform sampler2D t;out vec4 o;void main(){vec4 c=texture(t,v);if(c.a<.5)discard;o=c;}`
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   const shader = gl.createShader(type)!
@@ -66,20 +37,18 @@ export function createRenderer(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext('webgl2')!
 
   const spriteProgram = program(gl, spriteVert, spriteFrag)
-  const spriteUniforms = {
-    resolution: gl.getUniformLocation(spriteProgram, 'u_resolution'),
-    center: gl.getUniformLocation(spriteProgram, 'u_center'),
-    size: gl.getUniformLocation(spriteProgram, 'u_size'),
-    rotation: gl.getUniformLocation(spriteProgram, 'u_rotation'),
-    flip: gl.getUniformLocation(spriteProgram, 'u_flip'),
-    uvRect: gl.getUniformLocation(spriteProgram, 'u_uvRect'),
-    atlas: gl.getUniformLocation(spriteProgram, 'u_atlas'),
-    useColor: gl.getUniformLocation(spriteProgram, 'u_useColor'),
-    color: gl.getUniformLocation(spriteProgram, 'u_color'),
+  const U = {
+    res: gl.getUniformLocation(spriteProgram, 'r'),
+    xform: gl.getUniformLocation(spriteProgram, 'x'), // vec4(x, y, sizeX, sizeY)
+    rf: gl.getUniformLocation(spriteProgram, 'o'), // vec2(rotation, flip)
+    uv: gl.getUniformLocation(spriteProgram, 'u'),
   }
 
-  const spriteQuad = gl.createVertexArray()
-  gl.bindVertexArray(spriteQuad)
+  // this app only ever has one program/VAO/texture unit in use, so program/VAO binding,
+  // the default-framebuffer bind, and the texture unit/sampler setup all happen once here
+  // instead of every frame — adding a 2nd program, VAO, or render target later needs those back
+  gl.useProgram(spriteProgram)
+  gl.bindVertexArray(gl.createVertexArray())
   quadBuffer(gl)
 
   const atlas = gl.createTexture()
@@ -106,38 +75,22 @@ export function createRenderer(canvas: HTMLCanvasElement) {
         r2?: number
         flip: number
         cell?: { x: number; y: number; w?: number; h?: number }
-        color?: [number, number, number]
       }[],
     ) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
       gl.viewport(0, 0, canvas.width, canvas.height)
       gl.clearColor(0x24 / 255, 0x9f / 255, 0xde / 255, 1)
       gl.clear(gl.COLOR_BUFFER_BIT)
 
-      if (!atlasReady || sprites.length === 0) return
+      if (!atlasReady) return
 
-      gl.useProgram(spriteProgram)
-      gl.bindVertexArray(spriteQuad)
-      gl.activeTexture(gl.TEXTURE0)
-      gl.bindTexture(gl.TEXTURE_2D, atlas)
-      gl.uniform1i(spriteUniforms.atlas, 0)
-      gl.uniform2f(spriteUniforms.resolution, canvas.width, canvas.height)
+      gl.uniform2f(U.res, canvas.width, canvas.height)
       for (const s of sprites) {
-        gl.uniform2f(spriteUniforms.center, s.x, s.y)
-        gl.uniform2f(spriteUniforms.size, s.r, s.r2 ?? s.r)
-        gl.uniform1f(spriteUniforms.rotation, s.rotation)
-        gl.uniform1f(spriteUniforms.flip, s.flip)
-        if (s.color) {
-          gl.uniform1i(spriteUniforms.useColor, 1)
-          gl.uniform3f(spriteUniforms.color, s.color[0], s.color[1], s.color[2])
-        } else {
-          gl.uniform1i(spriteUniforms.useColor, 0)
-          const u0 = (s.cell!.x * CELL) / SHEET
-          const v0 = (s.cell!.y * CELL) / SHEET
-          const u1 = u0 + (CELL * (s.cell!.w ?? 1)) / SHEET
-          const v1 = v0 + (CELL * (s.cell!.h ?? 1)) / SHEET
-          gl.uniform4f(spriteUniforms.uvRect, u0, v0, u1, v1)
-        }
+        gl.uniform4f(U.xform, s.x, s.y, s.r, s.r2 ?? s.r)
+        gl.uniform2f(U.rf, s.rotation, s.flip)
+        const { x, y, w = 1, h = 1 } = s.cell!
+        const u0 = (x * CELL) / SHEET
+        const v0 = (y * CELL) / SHEET
+        gl.uniform4f(U.uv, u0, v0, u0 + (w * CELL) / SHEET, v0 + (h * CELL) / SHEET)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
     },

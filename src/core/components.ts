@@ -5,7 +5,6 @@ export type Sprite = {
   oy?: number
   flip: number
   cell?: { x: number; y: number; w?: number; h?: number }
-  color?: [number, number, number]
 }
 export type Velocity = { dx: number; dy: number }
 export type Collider = { hw: number; hh: number; oy?: number }
