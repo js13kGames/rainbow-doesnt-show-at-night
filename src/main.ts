@@ -8,6 +8,7 @@ import { createSquashSystem } from './systems/squash.ts'
 import { createCollisionSystem } from './systems/collision.ts'
 import { createCloudSystem } from './systems/cloud.ts'
 import { initNightToggle, createNightSystem, spawnPlatforms } from './systems/night.ts'
+import { spawnPortal, createPortalSystem } from './systems/portal.ts'
 import { MAP, TILE_W, GRID_H } from './components/map.ts'
 import type { Transform, Sprite, Velocity, Collider } from './core/components.ts'
 import type { Player, Wobble, Cloud } from './components/index.ts'
@@ -39,6 +40,7 @@ for (let i = 0; i < CLOUD_COUNT; i++) {
 }
 
 spawnPlatforms(world, MAP)
+spawnPortal(world)
 
 world.spawn({
   transform: { x: playerPos.x, y: playerPos.y, scale: 1, rotation: 0 } satisfies Transform,
@@ -56,6 +58,7 @@ world.addSystem(createCollisionSystem())
 world.addSystem(createWobbleSystem())
 world.addSystem(createSquashSystem(world))
 world.addSystem(createNightSystem())
+world.addSystem(createPortalSystem(world, playerPos.x, playerPos.y))
 world.addSystem(createRenderSystem(renderer, canvas))
 initNightToggle(world, playerPos.x, playerPos.y)
 world.start()
