@@ -9,11 +9,11 @@ export const driftX = (x: number, speed: number, dt: number, r: number, canvasWi
 
 export function createCloudSystem(canvas: HTMLCanvasElement): System {
   return (world, dt) => {
-    world.query('transform', 'cloud').forEach((e) => {
-      const t = world.get<Transform>(e, 'transform')!
-      const s = world.get<Sprite>(e, 'sprite')!
-      const { speed } = world.get<Cloud>(e, 'cloud')!
-      world.add(e, 'transform', { ...t, x: driftX(t.x, speed, dt, s.r, canvas.width) })
+    world.query('a', 'i').forEach((e) => {
+      const t = world.get<Transform>(e, 'a')!
+      const s = world.get<Sprite>(e, 'b')!
+      const { speed } = world.get<Cloud>(e, 'i')!
+      world.add(e, 'a', { ...t, x: driftX(t.x, speed, dt, s.r, canvas.width) })
     })
   }
 }

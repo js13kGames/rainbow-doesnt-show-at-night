@@ -23,18 +23,18 @@ export function createJumpSystem(spawnX: number, spawnY: number): System {
   return (world, dt) => {
     if (keys.has(' ')) {
       keys.delete(' ')
-      world.query('player', 'transform', 'velocity').forEach((e) => {
-        if (world.has(e, 'jump')) return
-        const v = world.get<Velocity>(e, 'velocity')!
+      world.query('e', 'a', 'c').forEach((e) => {
+        if (world.has(e, 'h')) return
+        const v = world.get<Velocity>(e, 'c')!
         const dir = normalize(v.dx, v.dy) ?? { dx: 0, dy: 0 }
-        world.add(e, 'jump', { ...dir, t: 0 } satisfies Jump)
+        world.add(e, 'h', { ...dir, t: 0 } satisfies Jump)
       })
     }
 
-    world.query('transform', 'jump', 'velocity').forEach((e) => {
-      const t = world.get<Transform>(e, 'transform')!
-      const v = world.get<Velocity>(e, 'velocity')!
-      const j = world.get<Jump>(e, 'jump')!
+    world.query('a', 'h', 'c').forEach((e) => {
+      const t = world.get<Transform>(e, 'a')!
+      const v = world.get<Velocity>(e, 'c')!
+      const j = world.get<Jump>(e, 'h')!
       const dir = normalize(v.dx, v.dy) ?? j
       const nextT = j.t + dt
       const progress = Math.min(nextT / DURATION, 1)
@@ -44,16 +44,16 @@ export function createJumpSystem(spawnX: number, spawnY: number): System {
       const y = t.y + dir.dy * SPEED * dt - hopDelta
 
       if (nextT >= DURATION) {
-        const collider = world.get<Collider>(e, 'collider')!
+        const collider = world.get<Collider>(e, 'd')!
         const landed = isWalkableBox(MAP, x, y, collider.hw, collider.hh, collider.oy)
-        world.add(e, 'transform', landed ? { ...t, x, y } : { ...t, x: spawnX, y: spawnY })
-        world.remove(e, 'jump')
-        world.emit('land', e)
+        world.add(e, 'a', landed ? { ...t, x, y } : { ...t, x: spawnX, y: spawnY })
+        world.remove(e, 'h')
+        world.emit('l', e)
         return
       }
 
-      world.add(e, 'transform', { ...t, x, y })
-      world.add(e, 'jump', { ...dir, t: nextT } satisfies Jump)
+      world.add(e, 'a', { ...t, x, y })
+      world.add(e, 'h', { ...dir, t: nextT } satisfies Jump)
     })
   }
 }

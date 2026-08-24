@@ -20,23 +20,21 @@ function idleFrame(time: number): { rot: number; sy: number } {
   return IDLE_FRAMES[Math.floor(time / IDLE_STEP) % IDLE_FRAMES.length]
 }
 
-export function createWobbleSystem(): System {
-  return (world, dt) => {
-    time += dt
-    world.query('transform', 'sprite', 'wobble').forEach((e) => {
-      const t = world.get<Transform>(e, 'transform')!
-      const s = world.get<Sprite>(e, 'sprite')!
-      const w = world.get<Wobble>(e, 'wobble')!
-      const dx = t.x - w.prevX
-      const moving = dx !== 0 || t.y !== w.prevY
-      const frame = idleFrame(time)
-      const r2 = moving ? s.r : s.r * frame.sy
-      world.add(e, 'transform', {
-        ...t,
-        rotation: moving ? Math.sin(time * FREQ) * MAX_ANGLE : frame.rot,
-      })
-      world.add(e, 'sprite', { ...s, flip: dx !== 0 ? Math.sign(dx) : s.flip, r2, oy: s.r - r2 })
-      world.add(e, 'wobble', { prevX: t.x, prevY: t.y })
+export const wobbleSystem: System = (world, dt) => {
+  time += dt
+  world.query('a', 'b', 'f').forEach((e) => {
+    const t = world.get<Transform>(e, 'a')!
+    const s = world.get<Sprite>(e, 'b')!
+    const w = world.get<Wobble>(e, 'f')!
+    const dx = t.x - w.prevX
+    const moving = dx !== 0 || t.y !== w.prevY
+    const frame = idleFrame(time)
+    const r2 = moving ? s.r : s.r * frame.sy
+    world.add(e, 'a', {
+      ...t,
+      rotation: moving ? Math.sin(time * FREQ) * MAX_ANGLE : frame.rot,
     })
-  }
+    world.add(e, 'b', { ...s, flip: dx !== 0 ? Math.sign(dx) : s.flip, r2, oy: s.r - r2 })
+    world.add(e, 'f', { prevX: t.x, prevY: t.y })
+  })
 }

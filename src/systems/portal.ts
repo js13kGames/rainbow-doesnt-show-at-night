@@ -10,12 +10,12 @@ const PORTAL_CELL = { x: 3, y: 2, w: 1, h: 1 }
 
 // (re)spawns the current stage's portal — used at bootstrap and on every stage advance
 export function spawnPortal(world: World) {
-  world.query('portal').forEach((e) => world.despawn(e))
+  world.query('k').forEach((e) => world.despawn(e))
   const { col, row } = activeScene().portal
   world.spawn({
-    transform: { x: col * TILE_W + TILE_W / 2, y: row * GRID_H + GRID_H / 2, scale: 1, rotation: 0 } satisfies Transform,
-    sprite: { r: TILE_W / 2, r2: GRID_H / 2, oy: -GRID_H / 2, flip: 1, cell: PORTAL_CELL } satisfies Sprite,
-    portal: {} satisfies Portal,
+    a: { x: col * TILE_W + TILE_W / 2, y: row * GRID_H + GRID_H / 2, scale: 1, rotation: 0 } satisfies Transform,
+    b: { r: TILE_W / 2, r2: GRID_H / 2, oy: -GRID_H / 2, flip: 1, cell: PORTAL_CELL } satisfies Sprite,
+    k: {} satisfies Portal,
   })
 }
 
@@ -24,9 +24,9 @@ export function spawnPortal(world: World) {
 export function createPortalSystem(world: World, spawnX: number, spawnY: number): System {
   return () => {
     const { col, row } = activeScene().portal
-    world.query('player', 'transform', 'collider').forEach((en) => {
-      const t = world.get<Transform>(en, 'transform')!
-      const c = world.get<Collider>(en, 'collider')!
+    world.query('e', 'a', 'd').forEach((en) => {
+      const t = world.get<Transform>(en, 'a')!
+      const c = world.get<Collider>(en, 'd')!
       const pc = Math.floor(t.x / TILE_W)
       const pr = Math.floor((t.y + (c.oy ?? 0)) / GRID_H)
       if (pc !== col || pr !== row) return
@@ -34,8 +34,8 @@ export function createPortalSystem(world: World, spawnX: number, spawnY: number)
       advanceStage(night)
       spawnPlatforms(world, MAP)
       spawnPortal(world)
-      world.add(en, 'transform', { ...t, x: spawnX, y: spawnY })
-      world.emit('land', en)
+      world.add(en, 'a', { ...t, x: spawnX, y: spawnY })
+      world.emit('l', en)
     })
   }
 }

@@ -1,5 +1,8 @@
 import type { Entity, System, Timer } from './types.ts'
 
+// component/event type keys are runtime strings (Map keys), so terser can't mangle them —
+// every char is a byte in the bundle. Kept to 1 char: a=transform b=sprite c=velocity
+// d=collider e=player f=wobble g=squash h=jump i=cloud j=platform k=portal l=land
 export class World {
   private components = new Map<string, Map<Entity, unknown>>()
   private systems: System[] = []

@@ -11,12 +11,12 @@ export function createRenderSystem(renderer: ReturnType<typeof createRenderer>, 
     const offsetY = canvas.height / 2 - MAP_H / 2
 
     const sprites = world
-      .query('transform', 'sprite')
-      .filter((e) => !(night && world.has(e, 'cloud')))
+      .query('a', 'b')
+      .filter((e) => !(night && world.has(e, 'i')))
       .map((e) => {
-        const t = world.get<Transform>(e, 'transform')!
-        const s = world.get<Sprite>(e, 'sprite')!
-        const isBg = world.has(e, 'cloud')
+        const t = world.get<Transform>(e, 'a')!
+        const s = world.get<Sprite>(e, 'b')!
+        const isBg = world.has(e, 'i')
         return { ...t, ...s, x: t.x + (isBg ? 0 : offsetX), y: t.y + (isBg ? 0 : offsetY) + (s.oy ?? 0) }
       })
     sprites.sort((a, b) => (a.layer ?? 0) - (b.layer ?? 0))

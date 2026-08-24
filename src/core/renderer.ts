@@ -30,8 +30,8 @@ function quadBuffer(gl: WebGL2RenderingContext) {
   return buf
 }
 
-const CELL = 16
-const SHEET = 64
+// atlas cell / sheet are both powers of 2 (16, 64) — collapses to one constant ratio
+const STEP = 0.25
 
 export function createRenderer(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext('webgl2')!
@@ -92,9 +92,9 @@ export function createRenderer(canvas: HTMLCanvasElement) {
         gl.uniform4f(U.xform, s.x, s.y, s.r, s.r2 ?? s.r)
         gl.uniform2f(U.rf, s.rotation, s.flip)
         const { x, y, w = 1, h = 1 } = s.cell!
-        const u0 = (x * CELL) / SHEET
-        const v0 = (y * CELL) / SHEET
-        gl.uniform4f(U.uv, u0, v0, u0 + (w * CELL) / SHEET, v0 + (h * CELL) / SHEET)
+        const u0 = x * STEP
+        const v0 = y * STEP
+        gl.uniform4f(U.uv, u0, v0, u0 + w * STEP, v0 + h * STEP)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
     },
