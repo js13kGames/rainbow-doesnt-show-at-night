@@ -7,7 +7,7 @@ const CUTOFF = 0.6 // s
 
 export function onLand() {
   if (player.sq) return
-  player.sq = { t: 0, base: player.r2 ?? player.r }
+  player.sq = { t: 0, base: player.r2 }
 }
 
 export function updateSquash(dt: number) {

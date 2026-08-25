@@ -72,7 +72,7 @@ export function createRenderer(canvas: HTMLCanvasElement) {
       sprites: {
         x: number
         y: number
-        rotation: number
+        rotation?: number
         r: number
         r2?: number
         flip?: number
@@ -93,7 +93,7 @@ export function createRenderer(canvas: HTMLCanvasElement) {
       for (const s of sprites) {
         // flip mirrors via a negative width scale instead of a separate shader uniform
         gl.uniform4f(U.xform, s.x, s.y, s.r * (s.flip ?? 1), s.r2 ?? s.r)
-        gl.uniform1f(U.rf, s.rotation)
+        gl.uniform1f(U.rf, s.rotation ?? 0)
         const { x, y, w = 1, h = 1 } = s.cell!
         const u0 = x * STEP
         const v0 = y * STEP

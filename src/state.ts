@@ -7,6 +7,8 @@ const PLATFORM_DIRT_CELL = { x: 1, y: 2, w: 1, h: 1 }
 const PLATFORM_NIGHT_GRASS_CELL = { x: 0, y: 1, w: 1, h: 1 }
 const PLATFORM_NIGHT_DIRT_CELL = { x: 0, y: 2, w: 1, h: 1 }
 const PORTAL_CELL = { x: 3, y: 2, w: 1, h: 1 }
+// tiles are square (TILE_W === GRID_H), so every platform/portal shares one half-extent
+export const TILE_R = TILE_W / 2
 
 // only one moving entity exists (the player), so its "components" are just plain fields
 export const player = {
@@ -14,9 +16,9 @@ export const player = {
   y: 0,
   rotation: 0,
   r: 20,
-  r2: undefined as number | undefined,
-  oy: undefined as number | undefined,
-  flip: undefined as number | undefined,
+  r2: 20, // always overwritten by updateWobble before the first render — never actually undefined
+  oy: 0, // same
+  flip: undefined as number | undefined, // genuinely optional: unset until the player first moves horizontally
   cell: { x: 0, y: 0 } as Cell,
   vx: 0,
   vy: 0,
@@ -36,7 +38,7 @@ export function spawnPlayer(x: number, y: number) {
   player.wpy = y
 }
 
-export const portal = { x: 0, y: 0, r: TILE_W / 2, r2: GRID_H / 2, oy: -GRID_H / 2, cell: PORTAL_CELL }
+export const portal = { x: 0, y: 0, oy: -GRID_H / 2, cell: PORTAL_CELL }
 
 export function respawnPortal() {
   const { col, row } = activeScene().portal
@@ -44,7 +46,7 @@ export function respawnPortal() {
   portal.y = row * GRID_H + GRID_H / 2
 }
 
-export type PlatformTile = { x: number; y: number; r: number; r2: number; cell: Cell }
+export type PlatformTile = { x: number; y: number; cell: Cell }
 export let platforms: PlatformTile[] = []
 
 export function respawnPlatforms(map: number[][], night: boolean) {
@@ -54,7 +56,7 @@ export function respawnPlatforms(map: number[][], night: boolean) {
       if (tile === 0) return
       const isDirt = tile === TILE_DIRT
       const cell = isDirt ? (night ? PLATFORM_NIGHT_DIRT_CELL : PLATFORM_DIRT_CELL) : night ? PLATFORM_NIGHT_GRASS_CELL : PLATFORM_GRASS_CELL
-      platforms.push({ x: c * TILE_W + TILE_W / 2, y: r * GRID_H + GRID_H / 2, r: TILE_W / 2, r2: GRID_H / 2, cell })
+      platforms.push({ x: c * TILE_W + TILE_W / 2, y: r * GRID_H + GRID_H / 2, cell })
     }),
   )
 }
