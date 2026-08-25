@@ -1,7 +1,6 @@
-import type { System } from '../core/types.ts'
-import type { Transform, Velocity, Collider } from '../core/components.ts'
-import type { Jump } from '../components/index.ts'
 import { MAP, GRID_H, isWalkableBox } from '../components/map.ts'
+import { player } from '../state.ts'
+import { onLand } from './squash.ts'
 
 const DISTANCE = GRID_H * 1.3 // 타일 한 칸보다 쪼오금 더
 const DURATION = 0.25 // s
@@ -19,41 +18,37 @@ const hopOffset = (progress: number): number => HOP_HEIGHT * Math.sin(Math.PI * 
 const keys = new Set<string>()
 window.addEventListener('keydown', (e) => e.key === ' ' && keys.add(' '))
 
-export function createJumpSystem(spawnX: number, spawnY: number): System {
-  return (world, dt) => {
+export function createUpdateJump(spawnX: number, spawnY: number) {
+  return (dt: number) => {
     if (keys.has(' ')) {
       keys.delete(' ')
-      world.query('e', 'a', 'c').forEach((e) => {
-        if (world.has(e, 'h')) return
-        const v = world.get<Velocity>(e, 'c')!
-        const dir = normalize(v.dx, v.dy) ?? { dx: 0, dy: 0 }
-        world.add(e, 'h', { ...dir, t: 0 } satisfies Jump)
-      })
+      if (!player.jump) {
+        const dir = normalize(player.vx, player.vy) ?? { dx: 0, dy: 0 }
+        player.jump = { ...dir, t: 0 }
+      }
     }
 
-    world.query('a', 'h', 'c').forEach((e) => {
-      const t = world.get<Transform>(e, 'a')!
-      const v = world.get<Velocity>(e, 'c')!
-      const j = world.get<Jump>(e, 'h')!
-      const dir = normalize(v.dx, v.dy) ?? j
-      const nextT = j.t + dt
-      const progress = Math.min(nextT / DURATION, 1)
-      const hopDelta = hopOffset(progress) - hopOffset(Math.min(j.t / DURATION, 1))
+    const j = player.jump
+    if (!j) return
+    const dir = normalize(player.vx, player.vy) ?? j
+    const nextT = j.t + dt
+    const progress = Math.min(nextT / DURATION, 1)
+    const hopDelta = hopOffset(progress) - hopOffset(Math.min(j.t / DURATION, 1))
 
-      const x = t.x + dir.dx * SPEED * dt
-      const y = t.y + dir.dy * SPEED * dt - hopDelta
+    const x = player.x + dir.dx * SPEED * dt
+    const y = player.y + dir.dy * SPEED * dt - hopDelta
 
-      if (nextT >= DURATION) {
-        const collider = world.get<Collider>(e, 'd')!
-        const landed = isWalkableBox(MAP, x, y, collider.hw, collider.hh, collider.oy)
-        world.add(e, 'a', landed ? { ...t, x, y } : { ...t, x: spawnX, y: spawnY })
-        world.remove(e, 'h')
-        world.emit('l', e)
-        return
-      }
+    if (nextT >= DURATION) {
+      const landed = isWalkableBox(MAP, x, y, player.hw, player.hh, player.foy)
+      player.x = landed ? x : spawnX
+      player.y = landed ? y : spawnY
+      player.jump = null
+      onLand()
+      return
+    }
 
-      world.add(e, 'a', { ...t, x, y })
-      world.add(e, 'h', { ...dir, t: nextT } satisfies Jump)
-    })
+    player.x = x
+    player.y = y
+    player.jump = { ...dir, t: nextT }
   }
 }

@@ -13,79 +13,58 @@ cd dist && zip -9 -r /tmp/submission.zip . && unzip -l /tmp/submission.zip
 
 ## Directory layout
 
-- `src/core/` — engine internals: `world.ts` (ECS), `types.ts` (Entity/System/Timer), `components.ts` (engine-level component types the renderer depends on, e.g. Transform/Sprite), `renderer.ts` (WebGL), `render-system.ts` (generic transform+sprite render loop).
-- `src/components/` — application-specific component data types (this game's content, not engine internals).
-- `src/systems/` — application-specific systems (this game's rules).
-- `src/main.ts` — bootstrap only: canvas setup, world creation, initial spawns, system registration, `start()`.
+- `src/core/renderer.ts` — WebGL primitive: compiles the sprite shader, uploads the atlas texture, exposes `drawScene(sprites, colorT)`. Knows nothing about game state.
+- `src/core/render.ts` — builds the frame's sprite list from `state.ts` (platforms, clouds, portal, player, in back-to-front order) and calls `drawScene`.
+- `src/state.ts` — the game's entire mutable state: `player` (single object, all fields — position, velocity, collider, wobble/jump/squash sub-state), `portal` (single object), `platforms`/`clouds` (flat arrays). Also owns spawn/respawn functions for each.
+- `src/components/map.ts` — map data (`STAGES`, tile derivation) and collision helpers (`isWalkableBox`). Pure, no dependency on `state.ts`.
+- `src/systems/*.ts` — one file per concern (movement, jump, collision, wobble, squash, cloud, night, portal). Each exports a plain function (or a factory returning one) that reads/writes `state.ts` directly — no registration mechanism, no query.
+- `src/main.ts` — bootstrap (canvas setup, initial spawns) and owns the `requestAnimationFrame` loop, calling each system's update function in explicit order, then `render()`.
 
-## ECS World (`src/core/world.ts`, `src/core/types.ts`)
+## Game state (`src/state.ts`)
 
-- Entity: `crypto.randomUUID()` string, branded as `Entity` type for compile-time safety (zero runtime cost).
-- Components: `Map<string, Map<Entity, unknown>>`, typed by string key.
-- Systems: plain `(world, dt) => void` functions run in registration order — no priority/dependency graph.
-- Events: synchronous `Map`-based pub/sub (`on`/`emit`) — no queueing.
-- Timers: driven by loop `dt` accumulation, not `setTimeout` — pauses with the loop, no drift.
-- Loop: single `requestAnimationFrame`, `dt` clamped to 0.1s to avoid spiral of death — no fixed-timestep accumulator.
-- `spawn(components?)`/`despawn(entity)` combine entity creation with component attachment for ergonomic call sites.
-- `query(...types)` picks the smallest component store as anchor and intersects via `has()` — recomputed each call, no cached index.
+There is exactly one player, one portal, and flat arrays for platforms/clouds — no entity ever gains or loses components at runtime in ways that would justify a generic entity-component-system. So there isn't one: state is plain mutable objects/arrays, and systems mutate them directly instead of going through a generic store.
+
+- `player` holds every per-frame field the game's systems touch (`x`/`y`/`rotation` transform, `r`/`r2`/`oy`/`flip`/`cell` sprite, `vx`/`vy` velocity, `hw`/`hh`/`foy` collider, `wpx`/`wpy` wobble history, `jump`/`sq` — `null` when inactive, an object with data when active).
+- `platforms`/`clouds` are rebuilt wholesale (`respawnPlatforms`, in `spawnClouds`) rather than diffed — cheap enough at this entity count and simpler than incremental updates.
+- Render order is just array concatenation order in `render.ts` (platforms, then clouds, then portal, then player) — no `layer` field or sort needed since there's nothing to reorder relative to.
 
 ### Usage
 
 ```ts
-import { World } from './core/world.ts'
-import type { Entity } from './core/types.ts'
+// systems/*.ts: a plain function (or a factory closing over spawn-time constants)
+// that reads/writes state.ts directly
+export function updateSomething(dt: number) {
+  if (!player.something) return
+  player.something = tickSomething(player.something, dt)
+}
 
-const world = new World()
-
-type Stunned = { duration: number }
-
-// create entity with initial components
-const player = world.spawn({
-  position: { x: 0, y: 0 },
-  stunned: { duration: 0 },
-})
-
-// attach/detach a component after spawn (capability changes, not per-frame state)
-world.add(player, 'poisoned', { duration: 5 })
-world.remove(player, 'poisoned')
-
-// systems: registered once, run every frame in registration order
-world.addSystem((world, dt) => {
-  world
-    .query('position', 'stunned')
-    .map((e) => [e, world.get<Stunned>(e, 'stunned')!] as const)
-    .filter(([, stunned]) => stunned.duration > 0)
-    .forEach(([e, stunned]) => world.add(e, 'stunned', tickStunned(stunned, dt)))
-})
-
-// events: cross-system communication
-world.on('hit', (entity: Entity, damage: number) => { /* ... */ })
-world.emit('hit', player, 10)
-
-// timers: tied to the loop's dt, not setTimeout
-world.setTimer(2, () => console.log('2s elapsed'))
-world.setTimer(1, () => console.log('every 1s'), true)
-
-world.start() // begins the rAF loop
-world.stop()
+// main.ts: call each system's update function in explicit order every frame,
+// then render — order here IS the execution order (no priority/dependency graph)
+function tick(now: number) {
+  const dt = /* clamped to 0.1s to avoid spiral of death */
+  updateMovement()
+  updateJump(dt)
+  updateCollision(dt)
+  updateWobble(dt)
+  updateSquash(dt)
+  render()
+  requestAnimationFrame(tick)
+}
 ```
 
-State toggles (e.g. `stunned.duration`, where the component always stays attached and a field encodes on/off) are a `get` + pure recompute + `add`-writeback, not repeated `add`/`remove` calls. Reserve `add`/`remove` for entities gaining or losing an entire capability (component type presence/absence, which `query` filters on).
+### Coding style for systems
 
-### Coding style for systems & core components
+Keep the actual math in pure functions that take data and return the next state (e.g. `hopOffset(progress: number): number`, `driftX(x, speed, dt, r, canvasWidth): number`, `isWalkableBox(map, x, y, hw, hh, oy): boolean`) — no side effects, output determined solely by input. The system function itself is a thin shell: read the relevant `state.ts` fields, call the pure function(s), assign the result back (direct mutation — there's no copy-on-write store to fight, so don't manufacture one).
 
-Write system logic and core component code in as pure a functional style as possible — "functional core, imperative shell":
-- Split logic into pure functions that take component data and return the next state (e.g. `tickStunned(s: Stunned, dt: number): Stunned`). No side effects, no mutation — output determined solely by input.
-- Functions registered via `addSystem` are a thin shell only — read with `world.get`, call the pure function, write the result back with `world.add`. The World's Map-based storage itself stays mutable for performance/size reasons (persistent data structures aren't worth their cost inside a js13k budget).
-- Prefer standard array methods (`map`/`filter`/`reduce`) over raw loops for readability. Switch to an imperative loop only if profiling shows a real hot-path bottleneck (large entity counts, once per frame).
+Prefer standard array methods (`map`/`filter`/`forEach`) over raw loops for readability. Switch to an imperative loop only if profiling shows a real hot-path bottleneck.
 
 ### Quick sanity check
 
-`test/world.test.ts` covers the ECS core (spawn/despawn, add/get/has/remove, query, systems, on/emit, timers, start/stop dt clamping) with vitest. It's a devDependency only — not part of the js13k build, doesn't count toward the 13KB budget.
+`test/map.test.ts` covers the pure map logic (tile derivation, walkability checks) with vitest. It's a devDependency only — not part of the js13k build, doesn't count toward the 13KB budget.
 
 ```sh
-pnpm test      # run the World test suite
+pnpm test      # run the test suite
 pnpm typecheck # type-check without emitting
 ```
 
-Run both after touching `src/core/world.ts`/`src/core/types.ts` before considering the change done.
+Run both after touching `src/components/map.ts` before considering the change done.

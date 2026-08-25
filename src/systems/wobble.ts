@@ -1,6 +1,4 @@
-import type { System } from '../core/types.ts'
-import type { Transform, Sprite } from '../core/components.ts'
-import type { Wobble } from '../components/index.ts'
+import { player } from '../state.ts'
 
 const MAX_ANGLE = (10 * Math.PI) / 180
 const FREQ = 40 // rad/s while moving
@@ -16,25 +14,20 @@ const IDLE_FRAMES = [
 
 let time = 0
 
-function idleFrame(time: number): { rot: number; sy: number } {
-  return IDLE_FRAMES[Math.floor(time / IDLE_STEP) % IDLE_FRAMES.length]
+function idleFrame(t: number) {
+  return IDLE_FRAMES[Math.floor(t / IDLE_STEP) % IDLE_FRAMES.length]
 }
 
-export const wobbleSystem: System = (world, dt) => {
+export function updateWobble(dt: number) {
   time += dt
-  world.query('a', 'b', 'f').forEach((e) => {
-    const t = world.get<Transform>(e, 'a')!
-    const s = world.get<Sprite>(e, 'b')!
-    const w = world.get<Wobble>(e, 'f')!
-    const dx = t.x - w.prevX
-    const moving = dx !== 0 || t.y !== w.prevY
-    const frame = idleFrame(time)
-    const r2 = moving ? s.r : s.r * frame.sy
-    world.add(e, 'a', {
-      ...t,
-      rotation: moving ? Math.sin(time * FREQ) * MAX_ANGLE : frame.rot,
-    })
-    world.add(e, 'b', { ...s, flip: dx !== 0 ? Math.sign(dx) : s.flip, r2, oy: s.r - r2 })
-    world.add(e, 'f', { prevX: t.x, prevY: t.y })
-  })
+  const dx = player.x - player.wpx
+  const moving = dx !== 0 || player.y !== player.wpy
+  const frame = idleFrame(time)
+  const r2 = moving ? player.r : player.r * frame.sy
+  player.rotation = moving ? Math.sin(time * FREQ) * MAX_ANGLE : frame.rot
+  if (dx !== 0) player.flip = Math.sign(dx)
+  player.r2 = r2
+  player.oy = player.r - r2
+  player.wpx = player.x
+  player.wpy = player.y
 }

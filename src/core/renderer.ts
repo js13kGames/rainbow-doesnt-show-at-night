@@ -1,7 +1,9 @@
 // uniform names are kept to 1 char: GLSL source is a JS string, so terser can't mangle it —
 // every char here is a byte in the final bundle, unlike normal identifiers which get minified for free
+// horizontal flip is done via UV swap on the JS side (drawScene), not a shader uniform —
+// keeps rotation as a single float instead of a vec2
 const spriteVert = `#version 300 es
-layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x,u;uniform vec2 o;out vec2 v;void main(){float k=cos(o.x),n=sin(o.x);vec2 q=mat2(k,n,-n,k)*(vec2(a.x*o.y,a.y)*x.zw)+x.xy;vec2 e=q/r*2.-1.;gl_Position=vec4(e.x,-e.y,0,1);v=mix(u.xy,u.zw,a*.5+.5);}`
+layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x,u;uniform float o;out vec2 v;void main(){float k=cos(o),n=sin(o);vec2 q=mat2(k,n,-n,k)*(a*x.zw)+x.xy;vec2 e=q/r*2.-1.;gl_Position=vec4(e.x,-e.y,0,1);v=mix(u.xy,u.zw,a*.5+.5);}`
 
 const spriteFrag = `#version 300 es
 precision mediump float;in vec2 v;uniform sampler2D t;out vec4 o;void main(){vec4 c=texture(t,v);if(c.a<.5)discard;o=c;}`
@@ -73,7 +75,7 @@ export function createRenderer(canvas: HTMLCanvasElement) {
         rotation: number
         r: number
         r2?: number
-        flip: number
+        flip?: number
         cell?: { x: number; y: number; w?: number; h?: number }
       }[],
       colorT = 0, // 0=day sky, 1=night — lerped for a smooth background transition
@@ -89,8 +91,9 @@ export function createRenderer(canvas: HTMLCanvasElement) {
 
       gl.uniform2f(U.res, canvas.width, canvas.height)
       for (const s of sprites) {
-        gl.uniform4f(U.xform, s.x, s.y, s.r, s.r2 ?? s.r)
-        gl.uniform2f(U.rf, s.rotation, s.flip)
+        // flip mirrors via a negative width scale instead of a separate shader uniform
+        gl.uniform4f(U.xform, s.x, s.y, s.r * (s.flip ?? 1), s.r2 ?? s.r)
+        gl.uniform1f(U.rf, s.rotation)
         const { x, y, w = 1, h = 1 } = s.cell!
         const u0 = x * STEP
         const v0 = y * STEP
