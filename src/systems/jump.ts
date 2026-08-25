@@ -1,6 +1,7 @@
 import { MAP, GRID_H, isWalkableBox } from '../components/map.ts'
 import { player } from '../state.ts'
-import { onLand } from './squash.ts'
+import { onLand, respawnPlayer } from './squash.ts'
+import { isFading } from './fade.ts'
 
 const DISTANCE = GRID_H * 1.3 // 타일 한 칸보다 쪼오금 더
 const DURATION = 0.25 // s
@@ -20,7 +21,7 @@ window.addEventListener('keydown', (e) => e.key === ' ' && keys.add(' '))
 
 export function createUpdateJump(spawnX: number, spawnY: number) {
   return (dt: number) => {
-    if (keys.has(' ')) {
+    if (keys.has(' ') && !isFading()) {
       keys.delete(' ')
       if (!player.jump) {
         const dir = normalize(player.vx, player.vy) ?? { dx: 0, dy: 0 }
@@ -39,11 +40,14 @@ export function createUpdateJump(spawnX: number, spawnY: number) {
     const y = player.y + dir.dy * SPEED * dt - hopDelta
 
     if (nextT >= DURATION) {
-      const landed = isWalkableBox(MAP, x, y, player.hw, player.hh, player.foy)
-      player.x = landed ? x : spawnX
-      player.y = landed ? y : spawnY
       player.jump = null
-      onLand()
+      if (isWalkableBox(MAP, x, y, player.hw, player.hh, player.foy)) {
+        player.x = x
+        player.y = y
+        onLand()
+      } else {
+        respawnPlayer(spawnX, spawnY)
+      }
       return
     }
 

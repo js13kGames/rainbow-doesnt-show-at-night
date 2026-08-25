@@ -1,6 +1,7 @@
 import type { createRenderer } from './renderer.ts'
 import { MAP_W, MAP_H } from '../components/map.ts'
 import { colorT, night } from '../systems/night.ts'
+import { fade } from '../systems/fade.ts'
 import { player, portal, platforms, clouds, TILE_R } from '../state.ts'
 
 const CLOUD_CELL = { x: 0, y: 3, w: 2, h: 1 }
@@ -27,6 +28,6 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
       cell: player.cell,
     })
 
-    renderer.drawScene(sprites, colorT)
+    renderer.drawScene(sprites, colorT, fade)
   }
 }

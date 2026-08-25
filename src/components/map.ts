@@ -33,17 +33,20 @@ const deriveTiles = (base: number[][]): number[][] => {
 
 const parseMap = (rows: string[]): number[][] => deriveTiles(rows.map((row) => row.split('').map(Number)))
 
+// intro stage: a flat floor with nothing else on it, spawn at the far left (main.ts) and the
+// portal at the far right — walking straight to it is the whole tutorial
 export const STAGE_1: Scene = {
-  day: parseMap(['0000000000', '0000011010', '0001111000', '0000110000', '1111111111']),
-  // night layout drops the elevated platforms — standing on one when toggling makes you fall
-  night: parseMap(['0000000000', '0000000000', '0001111000', '0000000000', '1111111111']),
+  day: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
+  night: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
   portal: { col: 9, row: 4 },
 }
 
+// day floor has a 2-tile pit too wide to jump across; night fills it with a bridge — crossing
+// it is only possible after toggling night, teaching the mechanic
 export const STAGE_2: Scene = {
-  day: parseMap(['0000000000', '0110000000', '0111000000', '0000001110', '1111111111']),
+  day: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111001111']),
   night: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
-  portal: { col: 0, row: 4 },
+  portal: { col: 9, row: 4 },
 }
 
 // all stages ordered; how far the game currently extends is just how many entries live here —

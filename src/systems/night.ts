@@ -1,6 +1,6 @@
 import { activeScene, setActiveMap, isWalkableBox } from '../components/map.ts'
 import { player, respawnPlatforms } from '../state.ts'
-import { onLand } from './squash.ts'
+import { respawnPlayer } from './squash.ts'
 
 const PLAYER_CELL = { x: 0, y: 0 }
 const PLAYER_NIGHT_CELL = { x: 1, y: 0 }
@@ -22,9 +22,7 @@ export function initNightToggle(spawnX: number, spawnY: number) {
 
     if (player.jump) return // mid-hop: not standing on anything yet, jump.ts's own landing check applies
     if (isWalkableBox(map, player.x, player.y, player.hw, player.hh, player.foy)) return
-    player.x = spawnX
-    player.y = spawnY
-    onLand()
+    respawnPlayer(spawnX, spawnY)
   })
 }
 

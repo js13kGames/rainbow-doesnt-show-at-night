@@ -8,6 +8,7 @@ import { updateCollision } from './systems/collision.ts'
 import { createUpdateClouds } from './systems/cloud.ts'
 import { initNightToggle, updateNightFade } from './systems/night.ts'
 import { createUpdatePortal } from './systems/portal.ts'
+import { updateFade } from './systems/fade.ts'
 import { MAP, TILE_W, GRID_H } from './components/map.ts'
 import { player, spawnPlayer, respawnPlatforms, respawnPortal, spawnClouds } from './state.ts'
 
@@ -22,7 +23,9 @@ resize()
 
 const renderer = createRenderer(canvas)
 
-const spawnX = 5 * TILE_W + TILE_W / 2
+// far left edge of the floor — the portal sits at the far right, so the intro stage is just
+// "walk right"
+const spawnX = TILE_W / 2
 const spawnY = 4 * GRID_H
 
 spawnClouds(canvas, 10)
@@ -52,6 +55,7 @@ function tick(now: number) {
   updateSquash(dt)
   updateNightFade(dt)
   updatePortal()
+  updateFade(dt)
   render()
 
   requestAnimationFrame(tick)

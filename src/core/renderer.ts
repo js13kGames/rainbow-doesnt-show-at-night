@@ -5,8 +5,10 @@
 const spriteVert = `#version 300 es
 layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x,u;uniform float o;out vec2 v;void main(){float k=cos(o),n=sin(o);vec2 q=mat2(k,n,-n,k)*(a*x.zw)+x.xy;vec2 e=q/r*2.-1.;gl_Position=vec4(e.x,-e.y,0,1);v=mix(u.xy,u.zw,a*.5+.5);}`
 
+// f = stage-transition fade (0=clear, 1=fully faded to black), multiplied into alpha so
+// blending crossfades sprites toward the (also-darkened) clear color
 const spriteFrag = `#version 300 es
-precision mediump float;in vec2 v;uniform sampler2D t;out vec4 o;void main(){vec4 c=texture(t,v);if(c.a<.5)discard;o=c;}`
+precision mediump float;in vec2 v;uniform sampler2D t;uniform float f;out vec4 o;void main(){vec4 c=texture(t,v);if(c.a<.5)discard;o=vec4(c.rgb,c.a*(1.-f));}`
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   const shader = gl.createShader(type)!
@@ -42,8 +44,9 @@ export function createRenderer(canvas: HTMLCanvasElement) {
   const U = {
     res: gl.getUniformLocation(spriteProgram, 'r'),
     xform: gl.getUniformLocation(spriteProgram, 'x'), // vec4(x, y, sizeX, sizeY)
-    rf: gl.getUniformLocation(spriteProgram, 'o'), // vec2(rotation, flip)
+    rf: gl.getUniformLocation(spriteProgram, 'o'), // rotation
     uv: gl.getUniformLocation(spriteProgram, 'u'),
+    fade: gl.getUniformLocation(spriteProgram, 'f'),
   }
 
   // this app only ever has one program/VAO/texture unit in use, so program/VAO binding,
@@ -52,6 +55,8 @@ export function createRenderer(canvas: HTMLCanvasElement) {
   gl.useProgram(spriteProgram)
   gl.bindVertexArray(gl.createVertexArray())
   quadBuffer(gl)
+  gl.enable(gl.BLEND)
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
   const atlas = gl.createTexture()
   let atlasReady = false
@@ -79,17 +84,20 @@ export function createRenderer(canvas: HTMLCanvasElement) {
         cell?: { x: number; y: number; w?: number; h?: number }
       }[],
       colorT = 0, // 0=day sky, 1=night — lerped for a smooth background transition
+      fade = 0, // 0=clear, 1=fully faded to black — stage-transition overlay
     ) {
       gl.viewport(0, 0, canvas.width, canvas.height)
       const day = [0x24, 0x9f, 0xde]
       const nightCol = [0x14, 0x10, 0x13]
-      const [cr, cg, cb] = day.map((d, i) => d + (nightCol[i]! - d) * colorT)
+      const k = 1 - fade
+      const [cr, cg, cb] = day.map((d, i) => (d + (nightCol[i]! - d) * colorT) * k)
       gl.clearColor(cr! / 255, cg! / 255, cb! / 255, 1)
       gl.clear(gl.COLOR_BUFFER_BIT)
 
       if (!atlasReady) return
 
       gl.uniform2f(U.res, canvas.width, canvas.height)
+      gl.uniform1f(U.fade, fade)
       for (const s of sprites) {
         // flip mirrors via a negative width scale instead of a separate shader uniform
         gl.uniform4f(U.xform, s.x, s.y, s.r * (s.flip ?? 1), s.r2 ?? s.r)
