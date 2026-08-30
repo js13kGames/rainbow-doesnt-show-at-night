@@ -12,11 +12,18 @@ export const TILE_DIRT = 2
 // spawns. The portal is its own entity (see systems/portal.ts), not a tile value — `col`/`row`
 // here only pick its spawn position, same grid units as the tile arrays, on the ground row so
 // it's reachable in both day & night
+// a bridge tile's `night` picks which side it appears on — independent of the switch's own
+// side, so a day-side switch can raise a night-only bridge and vice versa
+export type SwitchDef = { col: number; row: number; bridge: { col: number; row: number; night: boolean }[] }
+
 export type Scene = {
   day: number[][]
   night: number[][]
-  portal: { col: number; row: number }
+  // `night` on the portal itself: undefined = reachable both day & night (default), true/false =
+  // only exists on that side
+  portal: { col: number; row: number; night?: boolean }
   keys: { day: { col: number; row: number }[]; night: { col: number; row: number }[] }
+  switches: { day: SwitchDef[]; night: SwitchDef[] }
 }
 
 // authoring format: 1=walkable, 0=empty. Grass is the default surface; any walkable tile with
@@ -45,32 +52,66 @@ export const STAGE_1: Scene = {
   night: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
   portal: { col: 9, row: 4 },
   keys: { day: [{ col: 3, row: 4 }], night: [{ col: 6, row: 4 }] },
+  switches: { day: [], night: [] },
 }
 
 // day floor has a 2-tile pit too wide to jump across; night fills it with a bridge — crossing
-// it is only possible after toggling night, teaching the mechanic
+// it is only possible after toggling night, teaching the mechanic. A second day-only pit
+// (col8) follows it, crossed by stepping the switch (col6) that raises a rainbow bridge over
+// it — so the player must toggle night to cross the first gap, then toggle back to day to
+// reach the switch
 export const STAGE_2: Scene = {
-  day: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111001111']),
+  day: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111001101']),
   night: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
   portal: { col: 9, row: 4 },
   keys: { day: [{ col: 2, row: 4 }], night: [{ col: 7, row: 4 }] },
+  switches: { day: [{ col: 6, row: 4, bridge: [{ col: 8, row: 4, night: false }] }], night: [] },
+}
+
+// QA-only: exercises the two cross-day/night features together — a night-side switch (col2)
+// raises a 3-tile bridge over a day-side pit (col4-6), and the portal (night: true) only
+// exists at night. Not real level content — pull this + its STAGES entry before submission.
+export const STAGE_TEST: Scene = {
+  day: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111000111']),
+  night: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
+  portal: { col: 9, row: 4, night: true },
+  keys: { day: [{ col: 1, row: 4 }], night: [{ col: 8, row: 4 }] },
+  switches: {
+    night: [
+      {
+        col: 2,
+        row: 4,
+        bridge: [
+          { col: 4, row: 4, night: false },
+          { col: 5, row: 4, night: false },
+          { col: 6, row: 4, night: false },
+        ],
+      },
+    ],
+    day: [],
+  },
 }
 
 // all stages ordered; how far the game currently extends is just how many entries live here —
 // js13k budget decides the final count
-export const STAGES: Scene[] = [STAGE_1, STAGE_2]
+export const STAGES: Scene[] = [STAGE_TEST, STAGE_1, STAGE_2]
 export let stageIndex = 0
 export const activeScene = () => STAGES[stageIndex]!
 
 export let MAP = activeScene().day
-export const setActiveMap = (night: boolean) => (MAP = night ? activeScene().night : activeScene().day)
+// each scene can be a different size, so these are recomputed with MAP rather than fixed to
+// STAGE_1 — a taller/wider stage centers and gets its own sea horizon correctly
+export let MAP_W = MAP[0]!.length * TILE_W
+export let MAP_H = MAP.length * GRID_H
+export const setActiveMap = (night: boolean) => {
+  MAP = night ? activeScene().night : activeScene().day
+  MAP_W = MAP[0]!.length * TILE_W
+  MAP_H = MAP.length * GRID_H
+}
 export const advanceStage = (night: boolean) => {
   stageIndex = (stageIndex + 1) % STAGES.length
   setActiveMap(night)
 }
-
-export const MAP_W = STAGE_1.day[0]!.length * TILE_W
-export const MAP_H = STAGE_1.day.length * GRID_H
 
 const isGreenAt = (map: number[][], px: number, py: number): boolean => {
   const col = Math.floor(px / TILE_W)
@@ -82,7 +123,9 @@ const isGreenAt = (map: number[][], px: number, py: number): boolean => {
 // skipped when hw/hh is 0 so a point collider (hw=hh=0) stays an exact single point
 const EPS = 0.01
 
-export const isWalkableBox = (map: number[][], x: number, y: number, hw: number, hh: number, oy = 0): boolean => {
+// `bridges` is a set of "col,row" keys for rainbow-bridge tiles currently raised by a stepped
+// switch — those tiles are walkable even though the base map grid still has 0 there
+export const isWalkableBox = (map: number[][], x: number, y: number, hw: number, hh: number, oy = 0, bridges?: Set<string>): boolean => {
   const cx = x
   const cy = y + oy
   const ex = hw > 0 ? EPS : 0
@@ -92,5 +135,5 @@ export const isWalkableBox = (map: number[][], x: number, y: number, hw: number,
     [cx + hw - ex, cy - hh],
     [cx - hw, cy + hh - ey],
     [cx + hw - ex, cy + hh - ey],
-  ].every(([px, py]) => isGreenAt(map, px, py))
+  ].every(([px, py]) => isGreenAt(map, px, py) || (bridges?.has(`${Math.floor(px / TILE_W)},${Math.floor(py / GRID_H)}`) ?? false))
 }

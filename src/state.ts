@@ -18,6 +18,9 @@ export const TILE_R = TILE_W / 2
 // actual 4x8 aspect ratio instead of stretching it into a square
 export const KEY_R = (4 * 2.5) / 2
 export const KEY_R2 = (8 * 2.5) / 2
+export const SWITCH_CELL = { x: 2, y: 0, w: 1, h: 1 }
+export const SWITCH_STEPPED_CELL = { x: 3, y: 0, w: 1, h: 1 }
+export const BRIDGE_CELL = { x: 3, y: 1, w: 1, h: 1 }
 
 // only one moving entity exists (the player), so its "components" are just plain fields
 export const player = {
@@ -47,12 +50,13 @@ export function spawnPlayer(x: number, y: number) {
   player.wpy = y
 }
 
-export const portal = { x: 0, y: 0, oy: -GRID_H / 2 }
+export const portal = { x: 0, y: 0, oy: -GRID_H / 2, night: undefined as boolean | undefined }
 
 export function respawnPortal() {
-  const { col, row } = activeScene().portal
+  const { col, row, night } = activeScene().portal
   portal.x = col * TILE_W + TILE_W / 2
   portal.y = row * GRID_H + GRID_H / 2
+  portal.night = night
 }
 
 export type KeyEnt = { x: number; y: number; night: boolean; collected: boolean }
@@ -70,6 +74,39 @@ export function respawnKeys() {
 }
 
 export const allKeysCollected = () => keys.every((k) => k.collected)
+
+export type SwitchEnt = { x: number; y: number; bridge: { col: number; row: number; night: boolean }[]; night: boolean; stepped: boolean }
+export let switches: SwitchEnt[] = []
+
+export function respawnSwitches() {
+  const { day, night } = activeScene().switches
+  const toEnt = (isNight: boolean) => (s: { col: number; row: number; bridge: { col: number; row: number; night: boolean }[] }) => ({
+    x: s.col * TILE_W + TILE_W / 2,
+    y: s.row * GRID_H + GRID_H / 2,
+    bridge: s.bridge,
+    night: isNight,
+    stepped: false,
+  })
+  switches = [...day.map(toEnt(false)), ...night.map(toEnt(true))]
+}
+
+// switches stay stepped across day/night toggles and stage transitions rebuild them fresh — only
+// a fall-death resets them, so a raised bridge is a temporary reprieve, not a permanent shortcut
+export function resetSwitches() {
+  switches.forEach((s) => (s.stepped = false))
+}
+
+// a switch's own `night` only gates when it can be stepped on (which side its platform sits
+// on) — each bridge tile carries its own `night`, so a stepped switch can raise tiles on either
+// side regardless of which side the switch itself is on
+export function activeBridgeTiles(isNight: boolean): Set<string> {
+  const tiles = new Set<string>()
+  switches.forEach((s) => {
+    if (!s.stepped) return
+    s.bridge.forEach(({ col, row, night }) => night === isNight && tiles.add(`${col},${row}`))
+  })
+  return tiles
+}
 
 export type PlatformTile = { x: number; y: number; cell: Cell }
 export let platforms: PlatformTile[] = []

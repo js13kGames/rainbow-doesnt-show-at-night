@@ -1,5 +1,5 @@
 import { TILE_W, GRID_H, MAP, activeScene, advanceStage } from '../components/map.ts'
-import { player, respawnPortal, respawnPlatforms, respawnKeys, allKeysCollected } from '../state.ts'
+import { player, respawnPortal, respawnPlatforms, respawnKeys, respawnSwitches, allKeysCollected } from '../state.ts'
 import { night } from './night.ts'
 import { onLand } from './squash.ts'
 import { isFading, startFade } from './fade.ts'
@@ -12,7 +12,8 @@ const DURATION = 3 // s — full fade-out + fade-in
 export function createUpdatePortal(spawnX: number, spawnY: number) {
   return () => {
     if (isFading() || !allKeysCollected()) return
-    const { col, row } = activeScene().portal
+    const { col, row, night: portalNight } = activeScene().portal
+    if (portalNight !== undefined && portalNight !== night) return
     const pc = Math.floor(player.x / TILE_W)
     const pr = Math.floor((player.y + player.foy) / GRID_H)
     if (pc !== col || pr !== row) return
@@ -22,6 +23,7 @@ export function createUpdatePortal(spawnX: number, spawnY: number) {
       respawnPlatforms(MAP, night)
       respawnPortal()
       respawnKeys()
+      respawnSwitches()
       player.x = spawnX
       player.y = spawnY
       onLand()

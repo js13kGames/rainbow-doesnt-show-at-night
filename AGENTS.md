@@ -8,8 +8,10 @@ Size check: `pnpm build` produces `dist/index.html` as a single self-contained f
 
 ```sh
 pnpm build
-cd dist && zip -9 -r /tmp/submission.zip . && unzip -l /tmp/submission.zip
+cd dist && zip -9 -r /tmp/submission.zip . && ls -la /tmp/submission.zip
 ```
+
+`ls -la` output is the actual submitted zip size — judge against this, not `unzip -l`'s uncompressed listing.
 
 ## Directory layout
 

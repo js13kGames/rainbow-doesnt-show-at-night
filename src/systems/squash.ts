@@ -1,4 +1,4 @@
-import { player } from '../state.ts'
+import { player, resetSwitches } from '../state.ts'
 import { startFade } from './fade.ts'
 
 const AMPLITUDE = 0.9
@@ -18,6 +18,7 @@ export function respawnPlayer(x: number, y: number) {
   startFade(DEATH_FADE, () => {
     player.x = x
     player.y = y
+    resetSwitches()
     onLand()
   })
 }

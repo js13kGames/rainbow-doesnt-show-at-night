@@ -85,14 +85,25 @@ export function createRenderer(canvas: HTMLCanvasElement) {
       }[],
       colorT = 0, // 0=day sky, 1=night — lerped for a smooth background transition
       fade = 0, // 0=clear, 1=fully faded to black — stage-transition overlay
+      horizonY = canvas.height, // screen-space y (top-down) where sky meets sea; canvas.height = no sea band
     ) {
       gl.viewport(0, 0, canvas.width, canvas.height)
-      const day = [0x24, 0x9f, 0xde]
-      const nightCol = [0x14, 0x10, 0x13]
+      const sky = [0x24, 0x9f, 0xde]
+      const skyNight = [0x14, 0x10, 0x13]
+      const sea = [0x0d, 0x5f, 0x8f]
+      const seaNight = [0x08, 0x0a, 0x18]
       const k = 1 - fade
-      const [cr, cg, cb] = day.map((d, i) => (d + (nightCol[i]! - d) * colorT) * k)
-      gl.clearColor(cr! / 255, cg! / 255, cb! / 255, 1)
-      gl.clear(gl.COLOR_BUFFER_BIT)
+      const mix = (a: number[], b: number[]) => a.map((v, i) => (v + (b[i]! - v) * colorT) * k)
+      const clearBand = (color: number[], x: number, y: number, w: number, h: number) => {
+        const [cr, cg, cb] = mix(color, color === sky ? skyNight : seaNight)
+        gl.scissor(x, y, w, h)
+        gl.clearColor(cr! / 255, cg! / 255, cb! / 255, 1)
+        gl.clear(gl.COLOR_BUFFER_BIT)
+      }
+      gl.enable(gl.SCISSOR_TEST)
+      clearBand(sky, 0, canvas.height - horizonY, canvas.width, horizonY)
+      clearBand(sea, 0, 0, canvas.width, canvas.height - horizonY)
+      gl.disable(gl.SCISSOR_TEST)
 
       if (!atlasReady) return
 

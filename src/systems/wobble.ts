@@ -3,7 +3,7 @@ import { player } from '../state.ts'
 const MAX_ANGLE = (10 * Math.PI) / 180
 const FREQ = 40 // rad/s while moving
 const IDLE_ANGLE = (2 * Math.PI) / 180
-const IDLE_STEP = 0.15 // s per frame while idle
+export const IDLE_STEP = 0.15 // s per frame while idle
 // distinct per-frame distortion (rotation, vertical squish) for a chunkier, pixel-art idle wiggle
 const IDLE_FRAMES = [
   { rot: -IDLE_ANGLE, sy: 0.96 },
@@ -14,7 +14,9 @@ const IDLE_FRAMES = [
 
 let time = 0
 
-function idleFrame(t: number) {
+// exported so any idle sprite (the player, or a static one like a bridge tile) can reuse the
+// same chunky idle wiggle — just feed it a time value, offset per-instance for a ripple
+export function idleFrame(t: number) {
   return IDLE_FRAMES[Math.floor(t / IDLE_STEP) % IDLE_FRAMES.length]
 }
 

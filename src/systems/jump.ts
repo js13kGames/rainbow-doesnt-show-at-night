@@ -1,7 +1,8 @@
 import { MAP, GRID_H, isWalkableBox } from '../components/map.ts'
-import { player } from '../state.ts'
+import { player, activeBridgeTiles } from '../state.ts'
 import { onLand, respawnPlayer } from './squash.ts'
 import { isFading } from './fade.ts'
+import { night } from './night.ts'
 
 const DISTANCE = GRID_H * 1.3 // 타일 한 칸보다 쪼오금 더
 const DURATION = 0.25 // s
@@ -41,7 +42,7 @@ export function createUpdateJump(spawnX: number, spawnY: number) {
 
     if (nextT >= DURATION) {
       player.jump = null
-      if (isWalkableBox(MAP, x, y, player.hw, player.hh, player.foy)) {
+      if (isWalkableBox(MAP, x, y, player.hw, player.hh, player.foy, activeBridgeTiles(night))) {
         player.x = x
         player.y = y
         onLand()
