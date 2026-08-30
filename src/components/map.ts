@@ -12,7 +12,12 @@ export const TILE_DIRT = 2
 // spawns. The portal is its own entity (see systems/portal.ts), not a tile value — `col`/`row`
 // here only pick its spawn position, same grid units as the tile arrays, on the ground row so
 // it's reachable in both day & night
-export type Scene = { day: number[][]; night: number[][]; portal: { col: number; row: number } }
+export type Scene = {
+  day: number[][]
+  night: number[][]
+  portal: { col: number; row: number }
+  keys: { day: { col: number; row: number }[]; night: { col: number; row: number }[] }
+}
 
 // authoring format: 1=walkable, 0=empty. Grass is the default surface; any walkable tile with
 // no walkable tile directly below it (unsupported — the bottom of a platform, or the map floor)
@@ -39,6 +44,7 @@ export const STAGE_1: Scene = {
   day: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
   night: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
   portal: { col: 9, row: 4 },
+  keys: { day: [{ col: 3, row: 4 }], night: [{ col: 6, row: 4 }] },
 }
 
 // day floor has a 2-tile pit too wide to jump across; night fills it with a bridge — crossing
@@ -47,6 +53,7 @@ export const STAGE_2: Scene = {
   day: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111001111']),
   night: parseMap(['0000000000', '0000000000', '0000000000', '0000000000', '1111111111']),
   portal: { col: 9, row: 4 },
+  keys: { day: [{ col: 2, row: 4 }], night: [{ col: 7, row: 4 }] },
 }
 
 // all stages ordered; how far the game currently extends is just how many entries live here —

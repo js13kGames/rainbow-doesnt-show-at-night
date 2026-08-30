@@ -5,12 +5,13 @@ import { createUpdateJump } from './systems/jump.ts'
 import { updateWobble } from './systems/wobble.ts'
 import { updateSquash } from './systems/squash.ts'
 import { updateCollision } from './systems/collision.ts'
+import { updateKey } from './systems/key.ts'
 import { createUpdateClouds } from './systems/cloud.ts'
 import { initNightToggle, updateNightFade } from './systems/night.ts'
 import { createUpdatePortal } from './systems/portal.ts'
 import { updateFade } from './systems/fade.ts'
 import { MAP, TILE_W, GRID_H } from './components/map.ts'
-import { player, spawnPlayer, respawnPlatforms, respawnPortal, spawnClouds } from './state.ts'
+import { player, spawnPlayer, respawnPlatforms, respawnPortal, respawnKeys, spawnClouds } from './state.ts'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!
 
@@ -31,6 +32,7 @@ const spawnY = 4 * GRID_H
 spawnClouds(canvas, 10)
 respawnPlatforms(MAP, false)
 respawnPortal()
+respawnKeys()
 spawnPlayer(spawnX, spawnY)
 player.cell = { x: 0, y: 0 }
 
@@ -51,6 +53,7 @@ function tick(now: number) {
   updateMovement()
   updateJump(dt)
   updateCollision(dt)
+  updateKey()
   updateWobble(dt)
   updateSquash(dt)
   updateNightFade(dt)

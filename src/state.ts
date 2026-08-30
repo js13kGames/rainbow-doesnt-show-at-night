@@ -6,9 +6,18 @@ const PLATFORM_GRASS_CELL = { x: 1, y: 1, w: 1, h: 1 }
 const PLATFORM_DIRT_CELL = { x: 1, y: 2, w: 1, h: 1 }
 const PLATFORM_NIGHT_GRASS_CELL = { x: 0, y: 1, w: 1, h: 1 }
 const PLATFORM_NIGHT_DIRT_CELL = { x: 0, y: 2, w: 1, h: 1 }
-const PORTAL_CELL = { x: 3, y: 2, w: 1, h: 1 }
+export const PORTAL_OPEN_CELL = { x: 3, y: 2, w: 1, h: 1 }
+export const PORTAL_CLOSED_CELL = { x: 2, y: 2, w: 1, h: 1 }
+// key art is a tiny icon at atlas pixels (44,16)-(47,23) inclusive, not a full 16x16 cell —
+// inclusive bounds mean a 4x8px region (47-44+1, 23-16+1); cell coords are in cell units
+// (px/16), so this addresses that sub-region exactly, including its right/bottom edge pixels
+export const KEY_CELL = { x: 44 / 16, y: 16 / 16, w: 4 / 16, h: 8 / 16 }
 // tiles are square (TILE_W === GRID_H), so every platform/portal shares one half-extent
 export const TILE_R = TILE_W / 2
+// matches the SCALE=2.5 rule other sprites use (source px * SCALE / 2), sized to the icon's
+// actual 4x8 aspect ratio instead of stretching it into a square
+export const KEY_R = (4 * 2.5) / 2
+export const KEY_R2 = (8 * 2.5) / 2
 
 // only one moving entity exists (the player), so its "components" are just plain fields
 export const player = {
@@ -38,13 +47,29 @@ export function spawnPlayer(x: number, y: number) {
   player.wpy = y
 }
 
-export const portal = { x: 0, y: 0, oy: -GRID_H / 2, cell: PORTAL_CELL }
+export const portal = { x: 0, y: 0, oy: -GRID_H / 2 }
 
 export function respawnPortal() {
   const { col, row } = activeScene().portal
   portal.x = col * TILE_W + TILE_W / 2
   portal.y = row * GRID_H + GRID_H / 2
 }
+
+export type KeyEnt = { x: number; y: number; night: boolean; collected: boolean }
+export let keys: KeyEnt[] = []
+
+export function respawnKeys() {
+  const { day, night } = activeScene().keys
+  const toEnt = (isNight: boolean) => ({ col, row }: { col: number; row: number }) => ({
+    x: col * TILE_W + TILE_W / 2,
+    y: row * GRID_H + GRID_H / 2,
+    night: isNight,
+    collected: false,
+  })
+  keys = [...day.map(toEnt(false)), ...night.map(toEnt(true))]
+}
+
+export const allKeysCollected = () => keys.every((k) => k.collected)
 
 export type PlatformTile = { x: number; y: number; cell: Cell }
 export let platforms: PlatformTile[] = []
