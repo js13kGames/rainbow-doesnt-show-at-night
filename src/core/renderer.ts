@@ -3,13 +3,18 @@
 // horizontal flip is done via UV swap on the JS side (drawScene), not a shader uniform —
 // keeps rotation as a single float instead of a vec2
 const spriteVert = `#version 300 es
-layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x,u;uniform float o;out vec2 v;out float p;void main(){float k=cos(o),n=sin(o);vec2 q=mat2(k,n,-n,k)*(a*x.zw)+x.xy;vec2 e=q/r*2.-1.;gl_Position=vec4(e.x,-e.y,0,1);v=mix(u.xy,u.zw,a*.5+.5);p=a.y;}`
+layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x;uniform float o;out vec2 z;out float p;void main(){float k=cos(o),n=sin(o);vec2 q=mat2(k,n,-n,k)*(a*x.zw)+x.xy;vec2 e=q/r*2.-1.;gl_Position=vec4(e.x,-e.y,0,1);z=a*.5+.5;p=a.y;}`
 
 // f = stage-transition fade (0=clear, 1=fully faded to black); g/h = per-sprite alpha at the
 // quad's two vertical ends, lerped by local coord p (used by water reflections for a real
 // top-to-bottom fade within a single sprite instead of a flat multiplier) — h==g means no gradient
+// cells sit edge-to-edge in the atlas with no padding, so any float UV lookup that lands exactly
+// on a cell boundary is a genuine tie between two texels (not just a precision bug — more bits
+// don't fix it) and can round into the neighbor, bleeding its color in as a fringe. texelFetch
+// sidesteps this entirely: u = (pixel origin, pixel size) of the cell, z = fragment's own 0..1
+// fraction across the quad, so the texel index is computed once, deterministically, in integers
 const spriteFrag = `#version 300 es
-precision mediump float;in vec2 v;in float p;uniform sampler2D t;uniform float f,g,h;out vec4 o;void main(){vec4 c=texture(t,v);if(c.a<.5)discard;float q=p*.5+.5;o=vec4(c.rgb,c.a*(1.-f)*mix(h,g,q*q));}`
+precision mediump float;in vec2 z;in float p;uniform sampler2D t;uniform vec4 u;uniform float f,g,h;out vec4 o;void main(){vec2 s=u.zw;vec4 c=texelFetch(t,ivec2(u.xy)+ivec2(min(floor(z*s),s-1.)),0);if(c.a<.5)discard;float q=p*.5+.5;o=vec4(c.rgb,c.a*(1.-f)*mix(h,g,q*q));}`
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   const shader = gl.createShader(type)!
@@ -35,11 +40,14 @@ function quadBuffer(gl: WebGL2RenderingContext) {
   return buf
 }
 
-// atlas cell / sheet are both powers of 2 (16, 64) — collapses to one constant ratio
-const STEP = 0.25
+// every atlas cell is 16x16 source px — cell units (x/y/w/h on a Cell) are multiples of that
+const CELL_PX = 16
 
 export function createRenderer(canvas: HTMLCanvasElement) {
-  const gl = canvas.getContext('webgl2')!
+  // antialias defaults to true — MSAA softens rotated/wobbling sprite edges against the clear
+  // color, showing up as a faint fringe (worse against the dark night sky). Off for a crisp,
+  // pixel-perfect silhouette matching the texelFetch sampling above.
+  const gl = canvas.getContext('webgl2', { antialias: false })!
 
   const spriteProgram = program(gl, spriteVert, spriteFrag)
   const U = {
@@ -110,9 +118,7 @@ export function createRenderer(canvas: HTMLCanvasElement) {
         gl.uniform1f(U.alpha, s.alpha ?? 1)
         gl.uniform1f(U.alpha2, s.alpha2 ?? s.alpha ?? 1)
         const { x, y, w = 1, h = 1 } = s.cell!
-        const u0 = x * STEP
-        const v0 = y * STEP
-        gl.uniform4f(U.uv, u0, v0, u0 + w * STEP, v0 + h * STEP)
+        gl.uniform4f(U.uv, x * CELL_PX, y * CELL_PX, w * CELL_PX, h * CELL_PX)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
     },
