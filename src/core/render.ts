@@ -38,6 +38,13 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
     // Pushed before the real platform sprites below so a reflection that reaches into another
     // platform (a stack 2+ tiles tall) is painted over by the real tile, not the other way round
     const sprites: RenderSprite[] = []
+    // single-tile mirror for anything that isn't a grass+dirt platform stack (rainbow bridge
+    // tiles, the portal): flip the same cell below its own bottom edge with the same fading
+    // gradient and ripple as the grass reflection above
+    const reflect = (x: number, bottomY: number, cell: Cell, phase: number) => {
+      const frame = idleFrame(performance.now() * 0.001 + phase)
+      sprites.push({ x, y: bottomY + TILE_R, rotation: frame.rot, r: TILE_R, r2: -TILE_R * frame.sy, cell, alpha: 0.5, alpha2: 0.03 })
+    }
     platforms.forEach((p) => {
       if (p.cell.y !== 1) return
       const seamY = p.y + offsetY + GRID_H // dirt tile's own center — where its opaque half ends
@@ -67,9 +74,12 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
           // same idle wiggle as the player, phase-offset per column so it ripples along the bridge
           const frame = idleFrame(performance.now() * 0.001 + col * IDLE_STEP)
           const r2 = TILE_R * frame.sy
+          const x = col * TILE_W + TILE_W / 2 + offsetX
+          const bottomY = row * GRID_H + GRID_H / 2 + offsetY + TILE_R // fixed — wiggle grows the tile from this edge, doesn't move it
+          reflect(x, bottomY, BRIDGE_CELL, col * IDLE_STEP)
           sprites.push({
-            x: col * TILE_W + TILE_W / 2 + offsetX,
-            y: row * GRID_H + GRID_H / 2 + offsetY + (TILE_R - r2),
+            x,
+            y: bottomY - r2,
             rotation: frame.rot,
             r: TILE_R,
             r2,

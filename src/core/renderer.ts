@@ -9,7 +9,7 @@ layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x,u;uniform float o;out 
 // quad's two vertical ends, lerped by local coord p (used by water reflections for a real
 // top-to-bottom fade within a single sprite instead of a flat multiplier) — h==g means no gradient
 const spriteFrag = `#version 300 es
-precision mediump float;in vec2 v;in float p;uniform sampler2D t;uniform float f,g,h;out vec4 o;void main(){vec4 c=texture(t,v);if(c.a<.5)discard;o=vec4(c.rgb,c.a*(1.-f)*mix(h,g,p*.5+.5));}`
+precision mediump float;in vec2 v;in float p;uniform sampler2D t;uniform float f,g,h;out vec4 o;void main(){vec4 c=texture(t,v);if(c.a<.5)discard;float q=p*.5+.5;o=vec4(c.rgb,c.a*(1.-f)*mix(h,g,q*q));}`
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   const shader = gl.createShader(type)!
