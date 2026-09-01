@@ -7,7 +7,6 @@ import {
   player,
   portal,
   platforms,
-  clouds,
   keys,
   switches,
   TILE_R,
@@ -22,9 +21,8 @@ import {
   allKeysCollected,
 } from '../state.ts'
 
-const CLOUD_CELL = { x: 0, y: 3, w: 2, h: 1 }
 type Cell = { x: number; y: number; w?: number; h?: number }
-type RenderSprite = { x: number; y: number; rotation?: number; r: number; r2?: number; flip?: number; cell?: Cell }
+type RenderSprite = { x: number; y: number; rotation?: number; r: number; r2?: number; flip?: number; cell?: Cell; alpha?: number; alpha2?: number }
 
 export function createRender(renderer: ReturnType<typeof createRenderer>, canvas: HTMLCanvasElement) {
   return () => {
@@ -32,9 +30,33 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
     const offsetX = canvas.width / 2 - MAP_W / 2
     const offsetY = canvas.height / 2 - MAP_H / 2
 
+    // water reflection: mirror the grass+dirt stack below the water line. The dirt atlas cell
+    // is only opaque in its top half (a thin trim under the grass, transparent below) — cropped
+    // to just that opaque sliver so the reflection touches the seam with no dead transparent gap.
+    // Order matches a true mirror: dirt (closest to the seam) first, grass further down —
+    // both rippling via the bridge's idle-wiggle, phase-offset per column, fading with depth.
+    // Pushed before the real platform sprites below so a reflection that reaches into another
+    // platform (a stack 2+ tiles tall) is painted over by the real tile, not the other way round
+    const sprites: RenderSprite[] = []
+    platforms.forEach((p) => {
+      if (p.cell.y !== 1) return
+      const seamY = p.y + offsetY + GRID_H // dirt tile's own center — where its opaque half ends
+      const t = performance.now() * 0.001 + (p.x / TILE_W) * IDLE_STEP
+      // height is the sprite's own half-extent (r2 magnitude) — the dirt sliver is cropped to
+      // half a tile so it gets half-height, but the full grass cell keeps full height (no squash)
+      const push = (cy: number, cell: Cell, height: number, alpha: number, alpha2: number, phase: number) => {
+        const frame = idleFrame(t + phase)
+        sprites.push({ x: p.x + offsetX, y: cy, rotation: frame.rot, r: TILE_R, r2: -height * frame.sy, cell, alpha, alpha2 })
+      }
+
+      push(seamY + TILE_R / 2, { x: p.cell.x, y: 2, w: 1, h: 0.5 }, TILE_R / 2, 0.35, 0.35, 0)
+      // one full-size grass tile right below it, with a real top-to-bottom gradient (not chunked
+      // alpha steps) — vivid where it touches the dirt reflection, fading to near-nothing by its
+      // far edge, keeping the tile's true proportions throughout
+      push(seamY + TILE_R + TILE_R, p.cell, TILE_R, 0.5, 0.03, IDLE_STEP)
+    })
     // r2 omitted below (platforms/portal are square, so it just falls back to r in the renderer)
-    const sprites: RenderSprite[] = platforms.map((p) => ({ x: p.x + offsetX, y: p.y + offsetY, r: TILE_R, cell: p.cell }))
-    if (!night) clouds.forEach((c) => sprites.push({ x: c.x, y: c.y, r: c.r, r2: c.r2, flip: c.flip, cell: CLOUD_CELL }))
+    platforms.forEach((p) => sprites.push({ x: p.x + offsetX, y: p.y + offsetY, r: TILE_R, cell: p.cell }))
     switches.forEach((s) => {
       // switch icon only shows on its own side; each bridge tile shows on whichever side it
       // targets, independent of the switch's own side (see state.ts activeBridgeTiles)
@@ -70,8 +92,6 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
       cell: player.cell,
     })
 
-    // sky/sea split sits at the top of the floor row (last row of the grid), in screen space
-    const horizonY = offsetY + MAP_H - GRID_H
-    renderer.drawScene(sprites, colorT, fade, horizonY)
+    renderer.drawScene(sprites, colorT, fade)
   }
 }

@@ -122,22 +122,3 @@ export function respawnPlatforms(map: number[][], night: boolean) {
     }),
   )
 }
-
-export type CloudEnt = { x: number; y: number; r: number; r2: number; flip: number; speed: number }
-export const clouds: CloudEnt[] = []
-
-export function spawnClouds(canvas: HTMLCanvasElement, count: number) {
-  const slotW = canvas.width / count
-  for (let i = 0; i < count; i++) {
-    const depth = Math.random() // 0=멀리/위/작게, 1=가까이/아래/크게
-    const scale = 0.4 + depth * 1.4
-    clouds.push({
-      x: slotW * i + Math.random() * slotW,
-      y: canvas.height * (0.05 + depth * 0.75),
-      r: 40 * scale,
-      r2: 20 * scale,
-      flip: Math.random() < 0.5 ? -1 : 1,
-      speed: 15 + depth * 15,
-    })
-  }
-}
