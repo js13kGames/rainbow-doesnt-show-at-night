@@ -15,12 +15,16 @@ export function onLand() {
 // fell off the map (missed a jump landing, or the night toggle removed the ground under
 // the player): a quick fade to black, snap back to the stage's spawn point, fade back in
 export function respawnPlayer(x: number, y: number) {
-  startFade(DEATH_FADE, () => {
-    player.x = x
-    player.y = y
-    resetSwitches()
-    onLand()
-  })
+  startFade(
+    DEATH_FADE,
+    () => {
+      player.x = x
+      player.y = y
+      resetSwitches()
+      onLand()
+    },
+    true, // shrink the sprite out as it fades, then grow back in on respawn
+  )
 }
 
 export function updateSquash(dt: number) {

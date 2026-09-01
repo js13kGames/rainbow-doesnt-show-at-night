@@ -2,6 +2,9 @@
 // runs `cb` at the midpoint (screen is fully black), then ramps 1->0 over the second half.
 // shared by the portal's stage transition and the player's fall-death respawn.
 export let fade = 0
+// true only during a fall-death fade (see squash.ts) — the player sprite shrinks with `fade`
+// instead of the portal's plain black-screen transition
+export let shrinkPlayer = false
 let t = -1 // -1 = idle
 let half = 0
 let swapped = false
@@ -9,12 +12,13 @@ let cb = () => {}
 
 export const isFading = () => t >= 0
 
-export function startFade(duration: number, onMidpoint: () => void) {
+export function startFade(duration: number, onMidpoint: () => void, shrink = false) {
   if (t >= 0) return // ignore while already fading
   t = 0
   half = duration / 2
   swapped = false
   cb = onMidpoint
+  shrinkPlayer = shrink
 }
 
 export function updateFade(dt: number) {
@@ -25,5 +29,8 @@ export function updateFade(dt: number) {
     swapped = true
     cb()
   }
-  if (t >= half * 2) t = -1
+  if (t >= half * 2) {
+    t = -1
+    shrinkPlayer = false
+  }
 }

@@ -1,7 +1,7 @@
 import type { createRenderer } from './renderer.ts'
 import { MAP_W, MAP_H, TILE_W, GRID_H } from '../components/map.ts'
 import { colorT, night } from '../systems/night.ts'
-import { fade } from '../systems/fade.ts'
+import { fade, shrinkPlayer } from '../systems/fade.ts'
 import { idleFrame, IDLE_STEP } from '../systems/wobble.ts'
 import {
   player,
@@ -92,12 +92,16 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
     })
     if (portal.night === undefined || portal.night === night)
       sprites.push({ x: portal.x + offsetX, y: portal.y + offsetY + portal.oy, r: TILE_R, cell: allKeysCollected() ? PORTAL_OPEN_CELL : PORTAL_CLOSED_CELL })
+    // shrinks (and grows back) much faster than the screen fade itself, and sinks straight down
+    // while doing so — reads as falling/sinking away rather than just fading out in place
+    const deathT = shrinkPlayer ? Math.min(1, fade * 4) : 0
+    const deathScale = 1 - deathT
     sprites.push({
       x: player.x + offsetX,
-      y: player.y + offsetY + player.oy,
+      y: player.y + offsetY + player.oy + deathT * GRID_H,
       rotation: player.rotation,
-      r: player.r,
-      r2: player.r2,
+      r: player.r * deathScale,
+      r2: player.r2 * deathScale,
       flip: player.flip,
       cell: player.cell,
     })
