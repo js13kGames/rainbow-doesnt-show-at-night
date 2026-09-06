@@ -6,6 +6,8 @@ js13k requires entire codebase to be under 13KB size, so make sure check it when
 
 Size check: `pnpm build` produces `dist/index.html` as a single self-contained file (JS/CSS inlined, terser-minified via `vite.config.ts`). Zip it and check the size against the 13KB (13312 byte) budget:
 
+When try to run locally, use port 5174 and do not kill vite process in port 5173.
+
 ```sh
 pnpm build
 cd dist && zip -9 -r /tmp/submission.zip . && ls -la /tmp/submission.zip
