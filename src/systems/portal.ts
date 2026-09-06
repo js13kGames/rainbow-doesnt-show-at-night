@@ -1,4 +1,4 @@
-import { TILE_W, GRID_H, MAP, activeScene, advanceStage } from '../components/map.ts'
+import { TILE_W, GRID_H, MAP, activeScene, advanceStage, spawnPoint } from '../components/map.ts'
 import { player, respawnPortal, respawnPlatforms, respawnKeys, respawnSwitches, allKeysCollected } from '../state.ts'
 import { night } from './night.ts'
 import { onLand } from './squash.ts'
@@ -9,7 +9,7 @@ const DURATION = 3 // s — full fade-out + fade-in
 // when the player's feet land on the portal tile: fade to black, swap stages at the midpoint
 // (advance to the next stage, wrapping, and drop the player back at spawn — mirrors
 // night.ts's toggle-triggered respawn), then fade back in
-export function createUpdatePortal(spawnX: number, spawnY: number) {
+export function createUpdatePortal() {
   return () => {
     if (isFading() || !allKeysCollected()) return
     const { col, row, night: portalNight } = activeScene().portal
@@ -24,8 +24,9 @@ export function createUpdatePortal(spawnX: number, spawnY: number) {
       respawnPortal()
       respawnKeys()
       respawnSwitches()
-      player.x = spawnX
-      player.y = spawnY
+      const p = spawnPoint()
+      player.x = p.x
+      player.y = p.y
       onLand()
     })
   }

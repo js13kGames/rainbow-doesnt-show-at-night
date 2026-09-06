@@ -1,4 +1,4 @@
-import { MAP, GRID_H, isWalkableBox } from '../components/map.ts'
+import { MAP, GRID_H, isWalkableBox, spawnPoint } from '../components/map.ts'
 import { player, activeBridgeTiles } from '../state.ts'
 import { onLand, respawnPlayer } from './squash.ts'
 import { isFading } from './fade.ts'
@@ -20,7 +20,7 @@ const hopOffset = (progress: number): number => HOP_HEIGHT * Math.sin(Math.PI * 
 const keys = new Set<string>()
 window.addEventListener('keydown', (e) => e.key === ' ' && keys.add(' '))
 
-export function createUpdateJump(spawnX: number, spawnY: number) {
+export function createUpdateJump() {
   return (dt: number) => {
     if (keys.has(' ') && !isFading()) {
       keys.delete(' ')
@@ -47,7 +47,8 @@ export function createUpdateJump(spawnX: number, spawnY: number) {
         player.y = y
         onLand()
       } else {
-        respawnPlayer(spawnX, spawnY)
+        const p = spawnPoint()
+        respawnPlayer(p.x, p.y)
       }
       return
     }

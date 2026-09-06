@@ -10,7 +10,7 @@ import { updateSwitch } from './systems/switch.ts'
 import { initNightToggle, updateNightFade } from './systems/night.ts'
 import { createUpdatePortal } from './systems/portal.ts'
 import { updateFade } from './systems/fade.ts'
-import { MAP, TILE_W, GRID_H } from './components/map.ts'
+import { MAP, spawnPoint } from './components/map.ts'
 import { player, spawnPlayer, respawnPlatforms, respawnPortal, respawnKeys, respawnSwitches } from './state.ts'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!
@@ -24,10 +24,7 @@ resize()
 
 const renderer = createRenderer(canvas)
 
-// far left edge of the floor — the portal sits at the far right, so the intro stage is just
-// "walk right"
-const spawnX = TILE_W / 2
-const spawnY = 4 * GRID_H
+const { x: spawnX, y: spawnY } = spawnPoint()
 
 respawnPlatforms(MAP, false)
 respawnPortal()
@@ -36,10 +33,10 @@ respawnSwitches()
 spawnPlayer(spawnX, spawnY)
 player.cell = { x: 0, y: 0 }
 
-const updateJump = createUpdateJump(spawnX, spawnY)
-const updatePortal = createUpdatePortal(spawnX, spawnY)
+const updateJump = createUpdateJump()
+const updatePortal = createUpdatePortal()
 const render = createRender(renderer, canvas)
-initNightToggle(spawnX, spawnY)
+initNightToggle()
 
 let last = performance.now()
 function tick(now: number) {

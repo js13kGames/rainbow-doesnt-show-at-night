@@ -1,4 +1,4 @@
-import { activeScene, setActiveMap, isWalkableBox } from '../components/map.ts'
+import { activeScene, setActiveMap, isWalkableBox, spawnPoint } from '../components/map.ts'
 import { player, respawnPlatforms, activeBridgeTiles } from '../state.ts'
 import { respawnPlayer } from './squash.ts'
 import { isFading } from './fade.ts'
@@ -12,7 +12,7 @@ export let colorT = 0 // 0=day, 1=night — eased each frame toward `night` by u
 
 // toggles day/night on 'j': swaps the active map + platform layout, reskins the player,
 // and drops the player back to spawn (with a landing bounce) if their footing vanished
-export function initNightToggle(spawnX: number, spawnY: number) {
+export function initNightToggle() {
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'j' || isFading()) return
     night = !night
@@ -23,7 +23,8 @@ export function initNightToggle(spawnX: number, spawnY: number) {
 
     if (player.jump) return // mid-hop: not standing on anything yet, jump.ts's own landing check applies
     if (isWalkableBox(map, player.x, player.y, player.hw, player.hh, player.foy, activeBridgeTiles(night))) return
-    respawnPlayer(spawnX, spawnY)
+    const p = spawnPoint()
+    respawnPlayer(p.x, p.y)
   })
 }
 

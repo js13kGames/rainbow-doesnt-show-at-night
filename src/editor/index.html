@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Stage Editor</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #222; color: #eee; font-family: monospace; overflow: hidden; }
+  #app { display: flex; height: 100%; }
+  #viewport { flex: 1; overflow: auto; background: #111; }
+  #canvas { display: block; image-rendering: pixelated; }
+  #sidebar { width: 360px; flex: none; padding: 12px; overflow: auto; background: #1a1a1a; border-left: 1px solid #444; box-sizing: border-box; }
+  h2 { font-size: 13px; margin: 14px 0 6px; text-transform: uppercase; color: #999; }
+  h2:first-child { margin-top: 0; }
+  .row { margin-bottom: 8px; }
+  select, button, textarea { width: 100%; background: #2a2a2a; color: #eee; border: 1px solid #555; font-family: monospace; font-size: 12px; box-sizing: border-box; padding: 4px; }
+  button { cursor: pointer; }
+  textarea { height: 220px; resize: vertical; }
+  .kv { display: flex; justify-content: space-between; font-size: 12px; margin: 2px 0; }
+  ul { margin: 4px 0; padding-left: 18px; font-size: 12px; }
+  li.active { color: #ffd54a; }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+  .badge.day { background: #249fde; color: #012; }
+  .badge.night { background: #141013; color: #eee; }
+  kbd { background: #333; border: 1px solid #555; border-radius: 3px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="viewport"><canvas id="canvas"></canvas></div>
+  <div id="sidebar">
+    <h2>Mode / Brush</h2>
+    <div class="row"><span id="modeBadge" class="badge day">DAY</span> <span id="brushLabel"></span></div>
+
+    <h2>Load stage</h2>
+    <div class="row"><select id="loadSelect"><option value="">(new blank stage)</option></select></div>
+
+    <h2>Grid</h2>
+    <div class="row kv"><span>size</span><span id="sizeLabel"></span></div>
+    <div class="row"><button id="growBtn">+1 row / col</button></div>
+
+    <h2>Spawn</h2>
+    <div class="row kv"><span id="spawnLabel"></span></div>
+
+    <h2>Portal</h2>
+    <div class="row kv"><span id="portalLabel"></span></div>
+
+    <h2>Keys</h2>
+    <ul id="keyList"></ul>
+
+    <h2>Switches <span style="font-weight:normal;color:#777">(* = active, for bridge brush)</span></h2>
+    <ul id="switchList"></ul>
+
+    <h2>Controls</h2>
+    <ul>
+      <li><kbd>&larr;&uarr;&darr;&rarr;</kbd> move cursor (grows grid at edges)</li>
+      <li><kbd>1</kbd> tile &nbsp;<kbd>2</kbd> spawn &nbsp;<kbd>3</kbd> key &nbsp;<kbd>4</kbd> portal &nbsp;<kbd>5</kbd> switch &nbsp;<kbd>6</kbd> bridge</li>
+      <li><kbd>space</kbd> place &nbsp;<kbd>backspace</kbd> remove</li>
+      <li><kbd>n</kbd> toggle day/night editing</li>
+      <li><kbd>tab</kbd> cycle active switch</li>
+      <li><kbd>d</kbd> copy this mode's grid onto the other</li>
+      <li><kbd>p</kbd> cycle portal night-lock (both &rarr; day-only &rarr; night-only)</li>
+      <li><kbd>c</kbd> copy exported Scene to clipboard</li>
+    </ul>
+
+    <h2>Export</h2>
+    <div class="row"><button id="copyBtn">Copy Scene to clipboard</button></div>
+    <textarea id="output" readonly spellcheck="false"></textarea>
+  </div>
+</div>
+<script type="module" src="./editor.ts"></script>
+</body>
+</html>
