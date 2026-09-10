@@ -12,7 +12,7 @@
   h2 { font-size: 13px; margin: 14px 0 6px; text-transform: uppercase; color: #999; }
   h2:first-child { margin-top: 0; }
   .row { margin-bottom: 8px; }
-  select, button, textarea { width: 100%; background: #2a2a2a; color: #eee; border: 1px solid #555; font-family: monospace; font-size: 12px; box-sizing: border-box; padding: 4px; }
+  select, button, textarea, input { width: 100%; background: #2a2a2a; color: #eee; border: 1px solid #555; font-family: monospace; font-size: 12px; box-sizing: border-box; padding: 4px; }
   button { cursor: pointer; }
   textarea { height: 220px; resize: vertical; }
   .kv { display: flex; justify-content: space-between; font-size: 12px; margin: 2px 0; }
@@ -60,7 +60,20 @@
       <li><kbd>d</kbd> copy this mode's grid onto the other</li>
       <li><kbd>p</kbd> cycle portal night-lock (both &rarr; day-only &rarr; night-only)</li>
       <li><kbd>c</kbd> copy exported Scene to clipboard</li>
+      <li><kbd>s</kbd> save current work as the named slot in the save-name box</li>
+      <li><kbd>enter</kbd> playtest this stage in a new tab (real game engine)</li>
     </ul>
+
+    <h2>Playtest</h2>
+    <div class="row"><button id="playBtn">▶ Play this stage</button></div>
+
+    <h2>Save / Load</h2>
+    <div class="row"><input id="saveName" type="text" placeholder="save name" /></div>
+    <div class="row"><button id="saveBtn">Save as</button></div>
+    <div class="row"><select id="saveList" size="4"></select></div>
+    <div class="row"><button id="loadSavedBtn">Load selected</button></div>
+    <div class="row"><button id="deleteSavedBtn">Delete selected</button></div>
+    <div class="row kv"><span id="saveStatus">not saved yet</span></div>
 
     <h2>Export</h2>
     <div class="row"><button id="copyBtn">Copy Scene to clipboard</button></div>

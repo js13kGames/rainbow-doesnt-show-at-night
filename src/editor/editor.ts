@@ -185,6 +185,82 @@ function loadStage(i: number) {
   render()
 }
 
+// named save slots in localStorage — separate from serialize()'s Scene-literal export: this is
+// raw editable state meant to survive a reload/tab-close, not something you'd paste into map.ts
+const STORAGE_KEY = 'js13k-editor-saves'
+type Snapshot = Pick<typeof state, 'day' | 'night' | 'spawn' | 'portal' | 'keys' | 'switches'>
+
+function getSaves(): Record<string, Snapshot> {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+}
+
+function saveAs(name: string) {
+  const { day, night, spawn, portal, keys, switches } = state
+  const saves = getSaves()
+  saves[name] = { day, night, spawn, portal, keys, switches }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saves))
+  refreshSaveList(name)
+  saveStatus.textContent = `saved "${name}" at ${new Date().toLocaleTimeString()}`
+}
+
+function loadSave(name: string) {
+  const snap = getSaves()[name]
+  if (!snap) return
+  state.day = snap.day
+  state.night = snap.night
+  state.spawn = snap.spawn
+  state.portal = snap.portal
+  state.keys = snap.keys
+  state.switches = snap.switches
+  state.cursor = { ...state.spawn }
+  state.activeSwitch = null
+  saveStatus.textContent = `loaded "${name}"`
+  render()
+}
+
+function deleteSave(name: string) {
+  const saves = getSaves()
+  delete saves[name]
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saves))
+  refreshSaveList()
+  saveStatus.textContent = `deleted "${name}"`
+}
+
+function refreshSaveList(selectName?: string) {
+  const names = Object.keys(getSaves())
+  saveList.innerHTML = ''
+  names.forEach((name) => {
+    const opt = document.createElement('option')
+    opt.value = name
+    opt.textContent = name
+    saveList.appendChild(opt)
+  })
+  if (selectName) saveList.value = selectName
+}
+
+function buildScene(): Scene {
+  return {
+    spawn: { ...state.spawn },
+    day: deriveTiles(state.day),
+    night: deriveTiles(state.night),
+    portal: { ...state.portal },
+    keys: { day: state.keys.day.map((k) => ({ ...k })), night: state.keys.night.map((k) => ({ ...k })) },
+    switches: {
+      day: state.switches.day.map((s) => ({ col: s.col, row: s.row, bridge: s.bridge.map((b) => ({ ...b })) })),
+      night: state.switches.night.map((s) => ({ col: s.col, row: s.row, bridge: s.bridge.map((b) => ({ ...b })) })),
+    },
+  }
+}
+
+function playtest() {
+  sessionStorage.setItem('js13k-editor-playtest', JSON.stringify(buildScene()))
+  window.open('./play.html', '_blank')
+}
+
 function toRows(g: number[][]): string[] {
   return g.map((r) => r.map((v) => (v ? '1' : '0')).join(''))
 }
@@ -223,6 +299,9 @@ const keyList = document.querySelector<HTMLUListElement>('#keyList')!
 const switchList = document.querySelector<HTMLUListElement>('#switchList')!
 const output = document.querySelector<HTMLTextAreaElement>('#output')!
 const loadSelect = document.querySelector<HTMLSelectElement>('#loadSelect')!
+const saveStatus = document.querySelector<HTMLSpanElement>('#saveStatus')!
+const saveName = document.querySelector<HTMLInputElement>('#saveName')!
+const saveList = document.querySelector<HTMLSelectElement>('#saveList')!
 
 STAGE_NAMES.forEach((name, i) => {
   const opt = document.createElement('option')
@@ -232,6 +311,11 @@ STAGE_NAMES.forEach((name, i) => {
 })
 loadSelect.addEventListener('change', () => loadStage(Number(loadSelect.value)))
 document.querySelector<HTMLButtonElement>('#copyBtn')!.addEventListener('click', () => navigator.clipboard.writeText(output.value))
+document.querySelector<HTMLButtonElement>('#saveBtn')!.addEventListener('click', () => saveAs(saveName.value.trim() || 'untitled'))
+document.querySelector<HTMLButtonElement>('#loadSavedBtn')!.addEventListener('click', () => saveList.value && loadSave(saveList.value))
+document.querySelector<HTMLButtonElement>('#deleteSavedBtn')!.addEventListener('click', () => saveList.value && deleteSave(saveList.value))
+document.querySelector<HTMLButtonElement>('#playBtn')!.addEventListener('click', playtest)
+refreshSaveList()
 document.querySelector<HTMLButtonElement>('#growBtn')!.addEventListener('click', () => {
   ensureSize(w(), h())
   render()
@@ -335,7 +419,8 @@ function render() {
 }
 
 window.addEventListener('keydown', (e) => {
-  if (document.activeElement === loadSelect || document.activeElement === output) return
+  const el = document.activeElement
+  if (el === loadSelect || el === output || el === saveName || el === saveList) return
   const brushKeys: Record<string, Brush> = { '1': 'tile', '2': 'spawn', '3': 'key', '4': 'portal', '5': 'switch', '6': 'bridge' }
   if (e.key in brushKeys) {
     state.brush = brushKeys[e.key]!
@@ -359,6 +444,9 @@ window.addEventListener('keydown', (e) => {
     case 'P': cyclePortalNight(); break
     case 'c':
     case 'C': navigator.clipboard.writeText(output.value); break
+    case 's':
+    case 'S': saveAs(saveName.value.trim() || 'untitled'); break
+    case 'Enter': playtest(); break
   }
 })
 
