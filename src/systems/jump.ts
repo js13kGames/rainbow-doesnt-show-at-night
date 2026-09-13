@@ -3,6 +3,7 @@ import { player, activeBridgeTiles } from '../state.ts'
 import { onLand, respawnPlayer } from './squash.ts'
 import { isFading } from './fade.ts'
 import { night } from './night.ts'
+import { play, SND_JUMP } from './sound.ts'
 
 const DISTANCE = GRID_H * 1.3 // 타일 한 칸보다 쪼오금 더
 const DURATION = 0.25 // s
@@ -27,6 +28,7 @@ export function createUpdateJump() {
       if (!player.jump) {
         const dir = normalize(player.vx, player.vy) ?? { dx: 0, dy: 0 }
         player.jump = { ...dir, t: 0 }
+        play(...SND_JUMP)
       }
     }
 

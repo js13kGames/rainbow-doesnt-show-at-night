@@ -1,5 +1,6 @@
-import { player, resetSwitches } from '../state.ts'
+import { player, resetSwitches, respawnKeys } from '../state.ts'
 import { startFade } from './fade.ts'
+import { play, SND_LAND, SND_DEATH } from './sound.ts'
 
 const AMPLITUDE = 0.9
 const DECAY = 10 // 1/s
@@ -10,20 +11,25 @@ const DEATH_FADE = 1 // s — quick fade for a fall-death respawn, vs the portal
 export function onLand() {
   if (player.sq) return
   player.sq = { t: 0, base: player.r2 }
+  play(...SND_LAND)
 }
 
-// fell off the map (missed a jump landing, or the night toggle removed the ground under
-// the player): a quick fade to black, snap back to the stage's spawn point, fade back in
-export function respawnPlayer(x: number, y: number) {
+// death respawn: fell off the map, night toggle removed the ground, or an obstacle hit the
+// player. A quick fade to black, snap back to the stage's spawn point, fade back in. `dir`
+// picks which way the shrinking sprite moves as it fades out — down (fall) or up (knockback)
+export function respawnPlayer(x: number, y: number, dir: 1 | -1 = 1) {
+  play(...SND_DEATH)
   startFade(
     DEATH_FADE,
     () => {
       player.x = x
       player.y = y
       resetSwitches()
+      respawnKeys()
       onLand()
     },
     true, // shrink the sprite out as it fades, then grow back in on respawn
+    dir,
   )
 }
 

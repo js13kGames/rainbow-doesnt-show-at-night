@@ -6,6 +6,8 @@ const PLATFORM_GRASS_CELL = { x: 1, y: 1, w: 1, h: 1 }
 const PLATFORM_DIRT_CELL = { x: 1, y: 2, w: 1, h: 1 }
 const PLATFORM_NIGHT_GRASS_CELL = { x: 0, y: 1, w: 1, h: 1 }
 const PLATFORM_NIGHT_DIRT_CELL = { x: 0, y: 2, w: 1, h: 1 }
+// hazard art: a 2x1-cell strip at atlas row 4 (pixels (0,64)-(31,79))
+export const OBSTACLE_CELL = { x: 0, y: 4, w: 2, h: 1 }
 export const PORTAL_OPEN_CELL = { x: 3, y: 2, w: 1, h: 1 }
 export const PORTAL_CLOSED_CELL = { x: 2, y: 2, w: 1, h: 1 }
 // key art is a tiny icon at atlas pixels (44,16)-(47,23) inclusive, not a full 16x16 cell —
@@ -18,11 +20,19 @@ export const TILE_R = TILE_W / 2
 // actual 4x8 aspect ratio instead of stretching it into a square
 export const KEY_R = (4 * 2.5) / 2
 export const KEY_R2 = (8 * 2.5) / 2
+// obstacle art is a 2x1-cell strip (2:1 aspect), unlike the square platform/portal cells
+export const OBSTACLE_R = (32 * 2.5) / 2
+export const OBSTACLE_R2 = (16 * 2.5) / 2
 export const SWITCH_CELL = { x: 2, y: 0, w: 1, h: 1 }
 export const SWITCH_STEPPED_CELL = { x: 3, y: 0, w: 1, h: 1 }
 export const BRIDGE_CELL = { x: 3, y: 1, w: 1, h: 1 }
 
 // only one moving entity exists (the player), so its "components" are just plain fields
+// true once the final stage's portal has been reached — freezes the stage-advance loop so the
+// last scene stays on screen instead of wrapping back to STAGE_1
+export let ended = false
+export const endGame = () => (ended = true)
+
 export const player = {
   x: 0,
   y: 0,
@@ -106,6 +116,18 @@ export function activeBridgeTiles(isNight: boolean): Set<string> {
     s.bridge.forEach(({ col, row, night }) => night === isNight && tiles.add(`${col},${row}`))
   })
   return tiles
+}
+
+export type ObstacleEnt = { x0: number; y0: number; range: number; axis: 'x' | 'y'; speed: number; t: number; x: number; y: number }
+export let obstacles: ObstacleEnt[] = []
+
+export function respawnObstacles() {
+  obstacles = (activeScene().obstacles ?? []).map((o) => {
+    const x = o.col * TILE_W + TILE_W / 2
+    const y = o.row * GRID_H + GRID_H / 2
+    const range = o.range * (o.axis === 'x' ? TILE_W : GRID_H)
+    return { x0: x, y0: y, range, axis: o.axis, speed: o.speed ?? 1, t: 0, x, y }
+  })
 }
 
 export type PlatformTile = { x: number; y: number; cell: Cell }

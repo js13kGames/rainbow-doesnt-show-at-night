@@ -16,6 +16,11 @@ export const TILE_DIRT = 2
 // side, so a day-side switch can raise a night-only bridge and vice versa
 export type SwitchDef = { col: number; row: number; bridge: { col: number; row: number; night: boolean }[] }
 
+// a patrolling hazard: rides a sine ping-pong of `range` tiles either side of (col,row) along
+// `axis`, active in both day & night (unlike keys/switches/bridges there's no toggle-driven
+// state to gate it on)
+export type ObstacleDef = { col: number; row: number; range: number; axis: 'x' | 'y'; speed?: number }
+
 export type Scene = {
   day: number[][]
   night: number[][]
@@ -27,6 +32,10 @@ export type Scene = {
   portal: { col: number; row: number; night?: boolean }
   keys: { day: { col: number; row: number }[]; night: { col: number; row: number }[] }
   switches: { day: SwitchDef[]; night: SwitchDef[] }
+  obstacles?: ObstacleDef[]
+  // one-line control reminder shown above the player while this stage is active — only set on
+  // the stage that first introduces the relevant key, so it never repeats once a player has seen it
+  hint?: string
 }
 
 // authoring format: 1=walkable, 0=empty. Grass is the default surface; any walkable tile with
@@ -61,10 +70,13 @@ export const STAGE_1: Scene = {
   portal: { col: 9, row: 4 },
   keys: { day: [{ col: 3, row: 4 }, { col: 6, row: 4 }], night: [] },
   switches: { day: [], night: [] },
+  hint: 'WASD MOVE',
 }
 
 // two single-tile pits (day == night) — just wide enough that walking in is fatal but a hop
-// (space) clears them. First stage that requires jumping
+// (space) clears them. First stage that requires jumping. Also introduces the patrolling
+// obstacle: it rides back and forth over col6 (a solid tile) so standing still there isn't
+// safe — has to be timed or hopped over like the pits
 export const STAGE_JUMP: Scene = {
   spawn: { col: 0, row: 4 },
   day: parseMap(floor(10, '1110111011')),
@@ -72,6 +84,8 @@ export const STAGE_JUMP: Scene = {
   portal: { col: 9, row: 4 },
   keys: { day: [{ col: 5, row: 4 }, { col: 8, row: 4 }], night: [] },
   switches: { day: [], night: [] },
+  obstacles: [{ col: 6, row: 4, range: 1, axis: 'x' }],
+  hint: 'SPACE JUMP',
 }
 
 // first multi-row stage: a 6-tile floor pit (col3-8) far too wide to jump straight across, with
@@ -97,6 +111,7 @@ export const STAGE_NIGHT: Scene = {
   portal: { col: 9, row: 4 },
   keys: { day: [{ col: 2, row: 4 }], night: [{ col: 7, row: 4 }] },
   switches: { day: [], night: [] },
+  hint: 'J NIGHT',
 }
 
 // same 2-tile pit shape as STAGE_NIGHT, but this time it's blocked in BOTH day and night (no

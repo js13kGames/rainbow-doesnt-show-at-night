@@ -67,6 +67,12 @@
     <h2>Playtest</h2>
     <div class="row"><button id="playBtn">▶ Play this stage</button></div>
 
+    <h2>Import <span style="font-weight:normal;color:#777">(e.g. from scripts/ga.ts)</span></h2>
+    <div class="row"><input id="importFile" type="file" accept="application/json,.json" /></div>
+    <div class="row"><textarea id="importInput" placeholder="paste Snapshot JSON here" style="height:80px"></textarea></div>
+    <div class="row"><button id="importBtn">Import JSON</button></div>
+    <div class="row kv"><span id="importStatus"></span></div>
+
     <h2>Save / Load</h2>
     <div class="row"><input id="saveName" type="text" placeholder="save name" /></div>
     <div class="row"><button id="saveBtn">Save as</button></div>

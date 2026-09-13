@@ -1,14 +1,16 @@
 import type { createRenderer } from './renderer.ts'
-import { MAP_W, MAP_H, TILE_W, GRID_H } from '../components/map.ts'
+import { MAP_W, MAP_H, TILE_W, GRID_H, activeScene } from '../components/map.ts'
 import { colorT, night } from '../systems/night.ts'
-import { fade, shrinkPlayer } from '../systems/fade.ts'
+import { fade, shrinkPlayer, deathDir } from '../systems/fade.ts'
 import { idleFrame, IDLE_STEP } from '../systems/wobble.ts'
+import { pushText, textWidth } from '../components/text.ts'
 import {
   player,
   portal,
   platforms,
   keys,
   switches,
+  obstacles,
   TILE_R,
   PORTAL_OPEN_CELL,
   PORTAL_CLOSED_CELL,
@@ -18,7 +20,11 @@ import {
   SWITCH_CELL,
   SWITCH_STEPPED_CELL,
   BRIDGE_CELL,
+  OBSTACLE_CELL,
+  OBSTACLE_R,
+  OBSTACLE_R2,
   allKeysCollected,
+  ended,
 } from '../state.ts'
 
 type Cell = { x: number; y: number; w?: number; h?: number }
@@ -87,24 +93,40 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
           })
         })
     })
+    obstacles.forEach((o) => sprites.push({ x: o.x + offsetX, y: o.y + offsetY, r: OBSTACLE_R, r2: OBSTACLE_R2, cell: OBSTACLE_CELL }))
     keys.forEach((k) => {
-      if (!k.collected && k.night === night) sprites.push({ x: k.x + offsetX, y: k.y + offsetY, r: KEY_R, r2: KEY_R2, cell: KEY_CELL })
+      // floats above the tile center, bobbing up/down in sync across all keys
+      const bob = Math.sin(performance.now() * 0.003) * 4 - 8
+      if (!k.collected && k.night === night) sprites.push({ x: k.x + offsetX, y: k.y + offsetY + bob, r: KEY_R, r2: KEY_R2, cell: KEY_CELL })
     })
     if (portal.night === undefined || portal.night === night)
       sprites.push({ x: portal.x + offsetX, y: portal.y + offsetY + portal.oy, r: TILE_R, cell: allKeysCollected() ? PORTAL_OPEN_CELL : PORTAL_CLOSED_CELL })
-    // shrinks (and grows back) much faster than the screen fade itself, and sinks straight down
-    // while doing so — reads as falling/sinking away rather than just fading out in place
+    // shrinks (and grows back) much faster than the screen fade itself, and moves straight up
+    // or down while doing so (see fade.ts's deathDir) — reads as falling away or being knocked
+    // off rather than just fading out in place
     const deathT = shrinkPlayer ? Math.min(1, fade * 4) : 0
     const deathScale = 1 - deathT
     sprites.push({
       x: player.x + offsetX,
-      y: player.y + offsetY + player.oy + deathT * GRID_H,
+      y: player.y + offsetY + player.oy + deathT * GRID_H * deathDir,
       rotation: player.rotation,
       r: player.r * deathScale,
       r2: player.r2 * deathScale,
       flip: player.flip,
       cell: player.cell,
     })
+
+    // last portal reached: stamp a word over the frozen final scene instead of looping back to
+    // stage 1 — screen-space, not map-offset, so it stays centered regardless of stage size
+    if (ended) pushText(sprites, 'FREE', canvas.width / 2 - 30, 40, 4)
+    // control reminder: floats above wherever the player currently stands (world-space, follows
+    // the player) rather than a fixed screen corner, and only exists on the stage that first
+    // teaches that key — vanishes on its own once the stage advances
+    const hint = activeScene().hint
+    if (hint && !ended) {
+      const scale = 3
+      pushText(sprites, hint, player.x + offsetX - textWidth(hint, scale) / 2, player.y + offsetY - player.r - GRID_H, scale)
+    }
 
     renderer.drawScene(sprites, colorT, fade)
   }

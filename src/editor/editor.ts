@@ -207,9 +207,7 @@ function saveAs(name: string) {
   saveStatus.textContent = `saved "${name}" at ${new Date().toLocaleTimeString()}`
 }
 
-function loadSave(name: string) {
-  const snap = getSaves()[name]
-  if (!snap) return
+function applySnapshot(snap: Snapshot) {
   state.day = snap.day
   state.night = snap.night
   state.spawn = snap.spawn
@@ -218,8 +216,26 @@ function loadSave(name: string) {
   state.switches = snap.switches
   state.cursor = { ...state.spawn }
   state.activeSwitch = null
-  saveStatus.textContent = `loaded "${name}"`
   render()
+}
+
+function loadSave(name: string) {
+  const snap = getSaves()[name]
+  if (!snap) return
+  applySnapshot(snap)
+  saveStatus.textContent = `loaded "${name}"`
+}
+
+// pastes in a Snapshot (same shape as a save slot) from outside the browser — e.g. scripts/ga.ts
+// prints one per generated stage so a GA result can be inspected/playtested without hand-copying
+// tile grids
+function importJSON(text: string) {
+  try {
+    applySnapshot(JSON.parse(text) as Snapshot)
+    importStatus.textContent = `imported at ${new Date().toLocaleTimeString()}`
+  } catch (e) {
+    importStatus.textContent = `invalid JSON: ${(e as Error).message}`
+  }
 }
 
 function deleteSave(name: string) {
@@ -302,6 +318,9 @@ const loadSelect = document.querySelector<HTMLSelectElement>('#loadSelect')!
 const saveStatus = document.querySelector<HTMLSpanElement>('#saveStatus')!
 const saveName = document.querySelector<HTMLInputElement>('#saveName')!
 const saveList = document.querySelector<HTMLSelectElement>('#saveList')!
+const importInput = document.querySelector<HTMLTextAreaElement>('#importInput')!
+const importStatus = document.querySelector<HTMLSpanElement>('#importStatus')!
+const importFile = document.querySelector<HTMLInputElement>('#importFile')!
 
 STAGE_NAMES.forEach((name, i) => {
   const opt = document.createElement('option')
@@ -315,6 +334,13 @@ document.querySelector<HTMLButtonElement>('#saveBtn')!.addEventListener('click',
 document.querySelector<HTMLButtonElement>('#loadSavedBtn')!.addEventListener('click', () => saveList.value && loadSave(saveList.value))
 document.querySelector<HTMLButtonElement>('#deleteSavedBtn')!.addEventListener('click', () => saveList.value && deleteSave(saveList.value))
 document.querySelector<HTMLButtonElement>('#playBtn')!.addEventListener('click', playtest)
+document.querySelector<HTMLButtonElement>('#importBtn')!.addEventListener('click', () => importJSON(importInput.value))
+importFile.addEventListener('change', async () => {
+  const file = importFile.files?.[0]
+  if (!file) return
+  importJSON(await file.text())
+  importFile.value = ''
+})
 refreshSaveList()
 document.querySelector<HTMLButtonElement>('#growBtn')!.addEventListener('click', () => {
   ensureSize(w(), h())
