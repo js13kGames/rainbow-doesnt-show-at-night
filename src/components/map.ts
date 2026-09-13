@@ -148,10 +148,6 @@ export const STAGE_COMBO: Scene = {
   switches: { day: [{ col: 6, row: 4, bridge: [{ col: 7, row: 4, night: false }, { col: 8, row: 4, night: false }] }], night: [] },
 }
 
-// stages.md 3.1: two obstacle-patrolled platform rows, one above the other. Spawn (row0) drops
-// through a 1-tile gap onto row2 (patrol covers the whole row, key at its right end), then
-// through another gap onto row4 (patrol covers the whole row the other way, key at its left end,
-// portal one tile past its right end where the patrol doesn't reach)
 // stages.md 3.1: a lattice of isolated 1-tile stepping stones (every stone one gap away from its
 // neighbor, both by row and by column, so every move is a jump — no straight walking anywhere).
 // Keys sit on the two safe outer edges (top row, left column); the portal sits dead center, where
@@ -215,7 +211,6 @@ export const STAGE_DODGE: Scene = {
   ],
 }
 
-// every obstacle type introduced so far, chained with a single solid tile between each: jump ->
 // stages.md 3.4 (as redrawn): day row0 reads "P xRRx S" — portal(col0), gap, a plain platform
 // (col2), the 2-tile rainbow-bridge gap (col3-4), another plain platform (col5), gap, spawn
 // (col7). The bridge sits squarely between spawn and portal, so it's the one thing standing
@@ -246,34 +241,18 @@ export const STAGE_NIGHT_SWITCH: Scene = {
   obstacles: [{ col: 11, row: 2, range: 4, axis: 'x', night: true }],
 }
 
-// the finale: a jump pit (col2), a free night pit (col4-5, blocked in day), and a toggle+jump
-// combo pit (col7-9, the split-island trick — a solid island splits a too-wide pit into two
-// jumpable gaps at night) warm up the whole toolkit, then the
-// capstone — a switch-raises-a-bridge trick, elevated: a DAY switch (col11) doubles as a
-// vertical-jump takeoff (STAGE_HEIGHT's straight-up/down jump) onto a row2 platform that's
-// broken for 2 tiles (col14-15, too wide to jump over) until the switch raises a bridge that
-// only appears at NIGHT — so the player must climb up in day, then toggle to night while
-// already on the platform to cross, landing back on the floor at col18 for the final stretch to
-// the night-only portal
+// the "완료" (finished) stage: not a level, just a resting place. A plain 3x3 island, identical
+// day and night, spawn dead center — nothing to solve, nothing to reach. portal.ts calls
+// endGame() the instant this stage is entered, which (see render.ts) both hides the portal
+// sprite and stamps FINISHED across the screen, so this stage's own `portal` coordinate is never
+// actually rendered or reachable; it's set to the spawn tile purely to satisfy Scene's type
 export const STAGE_FINAL: Scene = {
-  spawn: { col: 0, row: 4 },
-  day: parseMap([
-    '000000000000000000000',
-    '000000000000000000000',
-    '000000000001110011100',
-    '000000000000000000000',
-    '110100100011000000111',
-  ]),
-  night: parseMap([
-    '000000000000000000000',
-    '000000000000000000000',
-    '000000000001110011100',
-    '000000000000000000000',
-    '110111101011000000111',
-  ]),
-  portal: { col: 20, row: 4, night: true },
-  keys: { day: [{ col: 1, row: 4 }], night: [{ col: 1, row: 4 }] },
-  switches: { day: [{ col: 11, row: 4, bridge: [{ col: 14, row: 2, night: true }, { col: 15, row: 2, night: true }] }], night: [] },
+  spawn: { col: 1, row: 1 },
+  day: parseMap(['111', '111', '111']),
+  night: parseMap(['111', '111', '111']),
+  portal: { col: 1, row: 1 },
+  keys: { day: [], night: [] },
+  switches: { day: [], night: [] },
 }
 
 // all stages ordered, easiest to hardest; how far the game extends is just how many entries

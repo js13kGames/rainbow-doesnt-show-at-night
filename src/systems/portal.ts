@@ -1,6 +1,6 @@
 import { TILE_W, GRID_H, MAP, STAGES, stageIndex, activeScene, advanceStage, spawnPoint } from '../components/map.ts'
 import { player, respawnPortal, respawnPlatforms, respawnKeys, respawnSwitches, respawnObstacles, respawnDecorations, allKeysCollected, ended, endGame } from '../state.ts'
-import { night } from './night.ts'
+import { night, resetToDay } from './night.ts'
 import { onLand } from './squash.ts'
 import { isFading, startFade } from './fade.ts'
 import { play, SND_STAGE } from './sound.ts'
@@ -19,12 +19,11 @@ export function createUpdatePortal() {
     const pr = Math.floor((player.y + player.foy) / GRID_H)
     if (pc !== col || pr !== row) return
 
-    const isFinal = stageIndex === STAGES.length - 1
     play(...SND_STAGE)
     startFade(DURATION, () => {
-      if (isFinal) return endGame()
-      advanceStage(night)
-      respawnPlatforms(MAP, night)
+      advanceStage(false)
+      resetToDay()
+      respawnPlatforms(MAP, false)
       respawnPortal()
       respawnKeys()
       respawnSwitches()
@@ -34,6 +33,9 @@ export function createUpdatePortal() {
       player.x = p.x
       player.y = p.y
       onLand()
+      // the last stage is just a resting place (see its comment in map.ts) — arriving there IS
+      // the end, no further portal interaction expected
+      if (stageIndex === STAGES.length - 1) endGame()
     })
   }
 }

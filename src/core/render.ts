@@ -106,7 +106,9 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
       const bob = Math.sin(performance.now() * 0.003) * 4 - 8
       if (!k.collected && k.night === night) sprites.push({ x: k.x + offsetX, y: k.y + offsetY + bob, r: KEY_R, r2: KEY_R2, cell: KEY_CELL })
     })
-    if (portal.night === undefined || portal.night === night)
+    // hidden once the game has ended — the final stage is a resting place, not a level with its
+    // own portal to walk into (see its comment in map.ts)
+    if (!ended && (portal.night === undefined || portal.night === night))
       sprites.push({ x: portal.x + offsetX, y: portal.y + offsetY + portal.oy, r: TILE_R, cell: allKeysCollected() ? PORTAL_OPEN_CELL : PORTAL_CLOSED_CELL })
     // shrinks (and grows back) much faster than the screen fade itself, and moves straight up
     // or down while doing so (see fade.ts's deathDir) — reads as falling away or being knocked
@@ -123,9 +125,14 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
       cell: player.cell,
     })
 
-    // last portal reached: stamp a word over the frozen final scene instead of looping back to
+    // final stage reached: stamp a word across the top of the screen instead of looping back to
     // stage 1 — screen-space, not map-offset, so it stays centered regardless of stage size
-    if (ended) pushText(sprites, 'FREE', canvas.width / 2 - 30, 40, 4)
+    if (ended) {
+      const scale = 4
+      pushText(sprites, 'FINISHED', canvas.width / 2 - textWidth('FINISHED', scale) / 2, 40, scale)
+      const subScale = 2
+      pushText(sprites, 'THANK YOU', canvas.width / 2 - textWidth('THANK YOU', subScale) / 2, 40 + 5 * scale + 8, subScale)
+    }
     // control reminder: floats above wherever the player currently stands (world-space, follows
     // the player) rather than a fixed screen corner, and only exists on the stage that first
     // teaches that key — vanishes on its own once the stage advances

@@ -6,6 +6,9 @@ export default defineConfig({
   build: {
     target: 'esnext',
     cssCodeSplit: false,
+    // force the sprite sheet to base64-inline into the JS bundle regardless of size, so
+    // vite-plugin-singlefile can fold it into index.html instead of emitting a second file
+    assetsInlineLimit: Number.MAX_SAFE_INTEGER,
     minify: 'terser',
     terserOptions: {
       compress: {

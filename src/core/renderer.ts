@@ -2,6 +2,8 @@
 // every char here is a byte in the final bundle, unlike normal identifiers which get minified for free
 // horizontal flip is done via UV swap on the JS side (drawScene), not a shader uniform —
 // keeps rotation as a single float instead of a vec2
+import spriteSheetUrl from '../assets/sprite-sheet.png'
+
 const spriteVert = `#version 300 es
 layout(location=0)in vec2 a;uniform vec2 r;uniform vec4 x;uniform float o;out vec2 z;out float p;void main(){float k=cos(o),n=sin(o);vec2 q=mat2(k,n,-n,k)*(a*x.zw)+x.xy;vec2 e=q/r*2.-1.;gl_Position=vec4(e.x,-e.y,0,1);z=a*.5+.5;p=a.y;}`
 
@@ -81,7 +83,7 @@ export function createRenderer(canvas: HTMLCanvasElement) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     atlasReady = true
   }
-  img.src = '/sprite-sheet.png'
+  img.src = spriteSheetUrl
 
   return {
     drawScene(

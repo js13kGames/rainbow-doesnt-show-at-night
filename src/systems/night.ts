@@ -28,6 +28,13 @@ export function initNightToggle() {
   })
 }
 
+// forces day mode — called on every stage transition (see portal.ts) so a new stage always
+// opens in day, regardless of which mode the player finished the previous stage in
+export function resetToDay() {
+  night = false
+  player.cell = PLAYER_CELL
+}
+
 export function updateNightFade(dt: number) {
   const target = night ? 1 : 0
   const step = dt / FADE_DURATION

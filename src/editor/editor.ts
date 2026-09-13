@@ -2,6 +2,7 @@
 // `pnpm dev` at /src/editor/index.html. Shares Scene/SwitchDef and the parseMap/deriveTiles
 // pipeline with the real game so its export pastes straight into components/map.ts.
 import { STAGES, deriveTiles, type Scene, type SwitchDef, type ObstacleDef } from '../components/map.ts'
+import spriteSheetUrl from '../assets/sprite-sheet.png'
 
 type Pt = { col: number; row: number }
 type Side = 'day' | 'night'
@@ -404,7 +405,7 @@ img.onload = () => {
   imgReady = true
   render()
 }
-img.src = '/sprite-sheet.png'
+img.src = spriteSheetUrl
 
 function drawCell(cell: { x: number; y: number; w?: number; h?: number }, dx: number, dy: number, dw = DISPLAY, dh = DISPLAY) {
   if (!imgReady) return
