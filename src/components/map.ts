@@ -75,9 +75,7 @@ export const STAGE_1: Scene = {
 }
 
 // two single-tile pits (day == night) — just wide enough that walking in is fatal but a hop
-// (space) clears them. First stage that requires jumping. Also introduces the patrolling
-// obstacle: it rides back and forth over col6 (a solid tile) so standing still there isn't
-// safe — has to be timed or hopped over like the pits
+// (space) clears them. First stage that requires jumping.
 export const STAGE_JUMP: Scene = {
   spawn: { col: 0, row: 4 },
   day: parseMap(floor(10, '1110111011')),
@@ -85,7 +83,6 @@ export const STAGE_JUMP: Scene = {
   portal: { col: 9, row: 4 },
   keys: { day: [{ col: 5, row: 4 }, { col: 8, row: 4 }], night: [] },
   switches: { day: [], night: [] },
-  obstacles: [{ col: 6, row: 4, range: 1, axis: 'x' }],
   hint: 'SPACE JUMP',
 }
 
@@ -151,100 +148,108 @@ export const STAGE_COMBO: Scene = {
   switches: { day: [{ col: 6, row: 4, bridge: [{ col: 7, row: 4, night: false }, { col: 8, row: 4, night: false }] }], night: [] },
 }
 
-// cross-mode switch: a 3-tile day pit (col4-6) blocked in BOTH day and night, opened only by a
-// switch on the NIGHT side (col2) raising a day-only bridge. Portal only exists at night, so
-// the forced order is day (grab key) -> night (hit switch) -> day (cross bridge) -> night
-// (reach portal)
-export const STAGE_CROSS: Scene = {
-  spawn: { col: 0, row: 4 },
-  day: parseMap(floor(10, '1111000111')),
-  night: parseMap(floor(10, '1111000111')),
-  portal: { col: 9, row: 4, night: true },
-  keys: { day: [{ col: 1, row: 4 }], night: [{ col: 3, row: 4 }] },
-  switches: {
-    night: [
-      {
-        col: 2,
-        row: 4,
-        bridge: [
-          { col: 4, row: 4, night: false },
-          { col: 5, row: 4, night: false },
-          { col: 6, row: 4, night: false },
-        ],
-      },
-    ],
-    day: [],
-  },
-}
-
-// a longer run chaining four obstacle types: a shared jump pit (col3), a day-switch pit (col6-7,
-// blocked at night too so it can't be skipped by staying in night), a night-is-the-answer pit
-// (col9-10, blocked in day, free at night), then a multi-row detour (col12-17): the floor gap is
-// too wide to jump directly, so the only way across is up onto a row2 platform — which is itself
-// broken at col14, requiring one more horizontal jump mid-air before descending back to the
-// floor at col17. Three jumps in a row (up / across the break / down) raises the bar past
-// STAGE_HEIGHT's single unbroken platform
-export const STAGE_MULTI: Scene = {
-  spawn: { col: 0, row: 4 },
-  day: parseMap(['00000000000000000000', '00000000000000000000', '00000000000011011100', '00000000000000000000', '11101100100110000111']),
-  night: parseMap(['00000000000000000000', '00000000000000000000', '00000000000011011100', '00000000000000000000', '11101100111110000111']),
-  portal: { col: 19, row: 4 },
-  keys: { day: [{ col: 1, row: 4 }], night: [{ col: 1, row: 4 }] },
-  switches: { day: [{ col: 5, row: 4, bridge: [{ col: 6, row: 4, night: false }, { col: 7, row: 4, night: false }] }], night: [] },
-}
-
-// toggle + jump combo, taught in isolation: a 3-tile day pit (col4-6) is too wide for any jump
-// (even at max reach), but at night col5 becomes a solid island splitting it into two 1-tile
-// gaps — each individually jumpable. Toggling is necessary but not sufficient: two precise jumps
-// are still required after switching to night. No switches involved (pure day/night geometry)
-export const STAGE_NIGHTJUMP: Scene = {
-  spawn: { col: 0, row: 4 },
-  day: parseMap(floor(10, '1111000111')),
-  night: parseMap(floor(10, '1111010111')),
-  portal: { col: 9, row: 4 },
-  keys: { day: [{ col: 1, row: 4 }], night: [{ col: 8, row: 4 }] },
+// stages.md 3.1: two obstacle-patrolled platform rows, one above the other. Spawn (row0) drops
+// through a 1-tile gap onto row2 (patrol covers the whole row, key at its right end), then
+// through another gap onto row4 (patrol covers the whole row the other way, key at its left end,
+// portal one tile past its right end where the patrol doesn't reach)
+// stages.md 3.1: a lattice of isolated 1-tile stepping stones (every stone one gap away from its
+// neighbor, both by row and by column, so every move is a jump — no straight walking anywhere).
+// Keys sit on the two safe outer edges (top row, left column); the portal sits dead center, where
+// a row-patrolling obstacle and a column-patrolling obstacle cross paths, so the final approach
+// always means timing both at once
+export const STAGE_OBSTACLE_1: Scene = {
+  spawn: { col: 0, row: 0 },
+  day: parseMap(['10101', '00000', '10101', '00000', '10101']),
+  night: parseMap(['10101', '00000', '10101', '00000', '10101']),
+  portal: { col: 2, row: 2 },
+  keys: { day: [{ col: 4, row: 0 }, { col: 0, row: 4 }], night: [] },
   switches: { day: [], night: [] },
+  obstacles: [
+    { col: 2, row: 2, range: 2, axis: 'x' },
+    { col: 2, row: 2, range: 2, axis: 'y' },
+  ],
+}
+
+// stages.md 3.2: a floor patrolled end-to-end by one obstacle, its stones spaced one gap apart
+// (col0,2,4,6,8) so crossing it is a chain of jumps, never a walk — key at its far stone (col8).
+// Spawn and portal sit on a shelf one row up (row2), also gapped: an easy key one jump from
+// spawn, the portal two more jumps along — reachable only by jumping back up from the floor
+// after the round trip for the far key, so the patrol's speed has to leave enough room for that
+// whole there-and-back
+export const STAGE_OBSTACLE_2: Scene = {
+  spawn: { col: 2, row: 2 },
+  day: parseMap(['000000000', '000000000', '101010000', '000000000', '101010101']),
+  night: parseMap(['000000000', '000000000', '101010000', '000000000', '101010101']),
+  portal: { col: 4, row: 2 },
+  keys: { day: [{ col: 0, row: 2 }, { col: 8, row: 4 }], night: [] },
+  switches: { day: [], night: [] },
+  obstacles: [{ col: 4, row: 4, range: 4, axis: 'x', speed: 0.5 }],
+}
+
+// stages.md 3.3: a row patrolled end-to-end by a fast obstacle, in both day & night — but the
+// night version of that row sits one jump further down than the day version, so the two modes
+// aren't just a reskin of the same floor, they're different destinations. Every tile everywhere
+// (shelf, day floor, night floor) is gapped to every-other-column (0,2,4,6,8, the STAGE_OBSTACLE_2
+// convention) so every single move anywhere in this stage is a jump, never a walk.
+// Spawn/portal share the row0 shelf, one tile apart (col0/col2, gap at col1). By day: drop one
+// jump to row2, which is the hazard floor itself (day obstacle, key at col8), then jump back up to
+// the shelf. By night: row2 is merely a safe two-stone bridge (col0/col2, no hazard) — you jump
+// down to it, then jump down again through another empty row to row4, the real night hazard floor
+// (night obstacle, its own key at col8), then reverse both jumps to reach the portal
+export const STAGE_DODGE: Scene = {
+  spawn: { col: 0, row: 0 },
+  // trailing all-zero row on `day` matches the dirt row deriveTiles auto-grows under night's
+  // row4 floor — without it day/night settle at different total heights, which shifts where
+  // MAP_H centers the stage (and with it, the player/portal's apparent position) on toggle
+  day: parseMap(['101000000', '000000000', '101010101', '000000000', '000000000', '000000000']),
+  night: parseMap(['101000000', '000000000', '101000000', '000000000', '101010101']),
+  portal: { col: 2, row: 0 },
+  keys: { day: [{ col: 8, row: 2 }], night: [{ col: 8, row: 4 }] },
+  switches: { day: [], night: [] },
+  // one obstacle per floor, opposite-signed speed between them (sin(-x) = -sin(x)) — the day
+  // obstacle and the night obstacle patrol in mirrored directions, even though they're never on
+  // screen at the same time, so switching modes always flips which way the hazard is heading
+  obstacles: [
+    { col: 4, row: 2, range: 4, axis: 'x', speed: 1, night: false },
+    { col: 4, row: 4, range: 4, axis: 'x', speed: -1, night: true },
+  ],
 }
 
 // every obstacle type introduced so far, chained with a single solid tile between each: jump ->
-// day-switch pit (blocked at night) -> free night pit (blocked in day) -> cross-mode switch
-// (night switch raises a day bridge, also blocked at night) -> toggle+jump combo pit (STAGE_
-// NIGHTJUMP's split-island trick) -> one more free night pit -> then the hardest link: a floor
-// gap (col20-25) that's blocked in both modes with no toggle escape at all, crossable only by
-// jumping straight up onto a row2 platform (from the day switch's own tile, col19) that is
-// itself broken for 2 tiles (col22-23, too wide to jump over) until the switch bridges it —
-// combining the vertical-jump skill from STAGE_HEIGHT with the switch-gating from STAGE_SWITCH,
-// landing back on the floor at col26 for the final stretch to the night-only portal
-export const STAGE_GAUNTLET: Scene = {
-  spawn: { col: 0, row: 4 },
-  day: parseMap([
-    '00000000000000000000000000000',
-    '00000000000000000000000000000',
-    '00000000000000000001110011100',
-    '00000000000000000000000000000',
-    '10100100100100100011000000111',
-  ]),
-  night: parseMap([
-    '00000000000000000000000000000',
-    '00000000000000000000000000000',
-    '00000000000000000001110011100',
-    '00000000000000000000000000000',
-    '10100111100111101011000000111',
-  ]),
-  portal: { col: 28, row: 4, night: true },
-  keys: { day: [{ col: 0, row: 4 }], night: [{ col: 0, row: 4 }] },
+// stages.md 3.4 (as redrawn): day row0 reads "P xRRx S" — portal(col0), gap, a plain platform
+// (col2), the 2-tile rainbow-bridge gap (col3-4), another plain platform (col5), gap, spawn
+// (col7). The bridge sits squarely between spawn and portal, so it's the one thing standing
+// between the player and the exit, not an optional detour. The only way to raise it is a
+// night-only switch on a lower floor (row2), reached by dropping through a gap row (row1) that
+// only exists at night — day's row0 is solid there, so falling through isn't a day option; at
+// night, row0 only keeps the spawn tile itself, forcing the drop. Row2's leftmost stone shares
+// spawn's column (col7) in both modes, matching the doc's space-counts exactly: day's row2 is 3
+// widely-spaced stones (col7,11,15, decorative, not on the critical path — nothing above it is
+// walkable pre-bridge so it was never reachable anyway), night's row2 is 5 one-gap-apart stones
+// (col7,9,11,13,15) patrolled by a night-only obstacle, switch at the center (col11), key at the
+// far end (col15). Return path: retrace row2 back to col7, jump up to the spawn tile, toggle to
+// day, then walk left across the now-bridged row0 (col5, col4, col3, col2) and a plain jump over
+// the col1 gap to the portal at col0
+export const STAGE_NIGHT_SWITCH: Scene = {
+  spawn: { col: 7, row: 0 },
+  // trailing all-zero row3 pads day out to match the dirt row deriveTiles auto-grows under
+  // night's row2 floor — keeps day/night at the same total height so MAP_H (and the
+  // player/portal's apparent position) doesn't shift on toggle
+  day: parseMap(['1010010100000000', '0000000000000000', '0000000100010001', '0000000000000000']),
+  night: parseMap(['0000000100000000', '0000000000000000', '0000000101010101']),
+  portal: { col: 0, row: 0, night: false },
+  keys: { day: [], night: [{ col: 15, row: 2 }] },
   switches: {
-    day: [
-      { col: 2, row: 4, bridge: [{ col: 3, row: 4, night: false }, { col: 4, row: 4, night: false }] },
-      { col: 19, row: 4, bridge: [{ col: 22, row: 2, night: false }, { col: 23, row: 2, night: false }] },
-    ],
-    night: [{ col: 8, row: 4, bridge: [{ col: 9, row: 4, night: false }, { col: 10, row: 4, night: false }] }],
+    night: [{ col: 11, row: 2, bridge: [{ col: 3, row: 0, night: false }, { col: 4, row: 0, night: false }] }],
+    day: [],
   },
+  obstacles: [{ col: 11, row: 2, range: 4, axis: 'x', night: true }],
 }
 
 // the finale: a jump pit (col2), a free night pit (col4-5, blocked in day), and a toggle+jump
-// combo pit (col7-9, STAGE_NIGHTJUMP's split-island trick) warm up the whole toolkit, then the
-// capstone — STAGE_CROSS's trick reversed AND elevated: a DAY switch (col11) doubles as a
+// combo pit (col7-9, the split-island trick — a solid island splits a too-wide pit into two
+// jumpable gaps at night) warm up the whole toolkit, then the
+// capstone — a switch-raises-a-bridge trick, elevated: a DAY switch (col11) doubles as a
 // vertical-jump takeoff (STAGE_HEIGHT's straight-up/down jump) onto a row2 platform that's
 // broken for 2 tiles (col14-15, too wide to jump over) until the switch raises a bridge that
 // only appears at NIGHT — so the player must climb up in day, then toggle to night while
@@ -280,10 +285,10 @@ export const STAGES: Scene[] = [
   STAGE_NIGHT,
   STAGE_SWITCH,
   STAGE_COMBO,
-  STAGE_CROSS,
-  STAGE_MULTI,
-  STAGE_NIGHTJUMP,
-  STAGE_GAUNTLET,
+  STAGE_OBSTACLE_1,
+  STAGE_OBSTACLE_2,
+  STAGE_DODGE,
+  STAGE_NIGHT_SWITCH,
   STAGE_FINAL,
 ]
 export let stageIndex = 0

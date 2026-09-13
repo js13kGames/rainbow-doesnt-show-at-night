@@ -21,7 +21,7 @@ const CELL_OBSTACLE = { x: 0, y: 4, w: 2, h: 1 }
 
 const STAGE_NAMES = [
   'STAGE_1', 'STAGE_JUMP', 'STAGE_HEIGHT', 'STAGE_NIGHT', 'STAGE_SWITCH', 'STAGE_COMBO',
-  'STAGE_CROSS', 'STAGE_MULTI', 'STAGE_NIGHTJUMP', 'STAGE_GAUNTLET', 'STAGE_FINAL',
+  'STAGE_OBSTACLE_1', 'STAGE_OBSTACLE_2', 'STAGE_DODGE', 'STAGE_NIGHT_SWITCH', 'STAGE_FINAL',
 ]
 
 const blank = (w: number, h: number): number[][] =>
