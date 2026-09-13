@@ -19,7 +19,8 @@ export type SwitchDef = { col: number; row: number; bridge: { col: number; row: 
 // a patrolling hazard: rides a sine ping-pong of `range` tiles either side of (col,row) along
 // `axis`, active in both day & night (unlike keys/switches/bridges there's no toggle-driven
 // state to gate it on)
-export type ObstacleDef = { col: number; row: number; range: number; axis: 'x' | 'y'; speed?: number }
+// `night` follows the portal's convention: undefined = active both day & night, true/false = one side only
+export type ObstacleDef = { col: number; row: number; range: number; axis: 'x' | 'y'; speed?: number; night?: boolean }
 
 export type Scene = {
   day: number[][]
@@ -323,6 +324,13 @@ const EPS = 0.01
 
 // `bridges` is a set of "col,row" keys for rainbow-bridge tiles currently raised by a stepped
 // switch — those tiles are walkable even though the base map grid still has 0 there
+// grass tiles with open air directly above — the only spots decorative flowers can sit on top of
+export const decorationSpots = (map: number[][]): { col: number; row: number }[] => {
+  const spots: { col: number; row: number }[] = []
+  map.forEach((row, r) => row.forEach((v, c) => v === TILE_GRASS && !map[r - 1]?.[c] && spots.push({ col: c, row: r })))
+  return spots
+}
+
 export const isWalkableBox = (map: number[][], x: number, y: number, hw: number, hh: number, oy = 0, bridges?: Set<string>): boolean => {
   const cx = x
   const cy = y + oy

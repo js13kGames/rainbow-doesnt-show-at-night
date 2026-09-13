@@ -1,11 +1,11 @@
 // Dev-only visual map editor — not part of the js13k build (see AGENTS.md). Open via
 // `pnpm dev` at /src/editor/index.html. Shares Scene/SwitchDef and the parseMap/deriveTiles
 // pipeline with the real game so its export pastes straight into components/map.ts.
-import { STAGES, deriveTiles, type Scene, type SwitchDef } from '../components/map.ts'
+import { STAGES, deriveTiles, type Scene, type SwitchDef, type ObstacleDef } from '../components/map.ts'
 
 type Pt = { col: number; row: number }
 type Side = 'day' | 'night'
-type Brush = 'tile' | 'spawn' | 'key' | 'portal' | 'switch' | 'bridge'
+type Brush = 'tile' | 'spawn' | 'key' | 'portal' | 'switch' | 'bridge' | 'obstacle'
 
 const CELL_PX = 16
 const DISPLAY = 32
@@ -17,6 +17,7 @@ const CELL_PORTAL = { x: 3, y: 2 }
 const CELL_KEY = { x: 44 / 16, y: 16 / 16, w: 4 / 16, h: 8 / 16 }
 const CELL_SWITCH = { x: 2, y: 0 }
 const CELL_BRIDGE = { x: 3, y: 1 }
+const CELL_OBSTACLE = { x: 0, y: 4, w: 2, h: 1 }
 
 const STAGE_NAMES = [
   'STAGE_1', 'STAGE_JUMP', 'STAGE_HEIGHT', 'STAGE_NIGHT', 'STAGE_SWITCH', 'STAGE_COMBO',
@@ -33,10 +34,12 @@ const state = {
   portal: { col: 9, row: 4 } as Scene['portal'],
   keys: { day: [] as Pt[], night: [] as Pt[] },
   switches: { day: [] as SwitchDef[], night: [] as SwitchDef[] },
+  obstacles: [] as ObstacleDef[],
   cursor: { col: 0, row: 4 } as Pt,
   mode: 'day' as Side,
   brush: 'tile' as Brush,
   activeSwitch: null as { side: Side; idx: number } | null,
+  activeObstacle: null as number | null,
 }
 
 const w = () => state.day[0]!.length
@@ -91,7 +94,36 @@ function place() {
       const night = state.mode === 'night'
       if (!sw.bridge.some((b) => b.col === col && b.row === row && b.night === night)) sw.bridge.push({ col, row, night })
     }
+  } else if (state.brush === 'obstacle') {
+    let idx = state.obstacles.findIndex((o) => o.col === col && o.row === row)
+    if (idx < 0) {
+      state.obstacles.push({ col, row, range: 1, axis: 'x' })
+      idx = state.obstacles.length - 1
+    }
+    state.activeObstacle = idx
   }
+  render()
+}
+
+const activeObstacleDef = (): ObstacleDef | undefined =>
+  state.activeObstacle === null ? undefined : state.obstacles[state.activeObstacle]
+
+function cycleObstacleAxis() {
+  const o = activeObstacleDef()
+  if (o) o.axis = o.axis === 'x' ? 'y' : 'x'
+  render()
+}
+
+function adjustObstacleRange(delta: number) {
+  const o = activeObstacleDef()
+  if (o) o.range = Math.max(1, o.range + delta)
+  render()
+}
+
+function cycleObstacleNight() {
+  const o = activeObstacleDef()
+  if (!o) return
+  o.night = o.night === undefined ? false : o.night === false ? true : undefined
   render()
 }
 
@@ -126,6 +158,15 @@ function erase() {
   const bi = activeSwitch?.bridge.findIndex((b) => b.col === col && b.row === row && b.night === night) ?? -1
   if (bi >= 0) {
     activeSwitch!.bridge.splice(bi, 1)
+    render()
+    return
+  }
+
+  const oi = state.obstacles.findIndex((o) => o.col === col && o.row === row)
+  if (oi >= 0) {
+    state.obstacles.splice(oi, 1)
+    if (state.activeObstacle === oi) state.activeObstacle = null
+    else if (state.activeObstacle !== null && state.activeObstacle > oi) state.activeObstacle--
     render()
     return
   }
@@ -167,6 +208,7 @@ function loadStage(i: number) {
     state.portal = { col: 9, row: 4 }
     state.keys = { day: [], night: [] }
     state.switches = { day: [], night: [] }
+    state.obstacles = []
   } else {
     const s = STAGES[i]!
     const strip = (g: number[][]) => g.map((r) => r.map((v) => (v === 1 ? 1 : 0)))
@@ -179,16 +221,18 @@ function loadStage(i: number) {
       day: s.switches.day.map((sw) => ({ col: sw.col, row: sw.row, bridge: sw.bridge.map((b) => ({ ...b })) })),
       night: s.switches.night.map((sw) => ({ col: sw.col, row: sw.row, bridge: sw.bridge.map((b) => ({ ...b })) })),
     }
+    state.obstacles = (s.obstacles ?? []).map((o) => ({ ...o }))
   }
   state.cursor = { ...state.spawn }
   state.activeSwitch = null
+  state.activeObstacle = null
   render()
 }
 
 // named save slots in localStorage — separate from serialize()'s Scene-literal export: this is
 // raw editable state meant to survive a reload/tab-close, not something you'd paste into map.ts
 const STORAGE_KEY = 'js13k-editor-saves'
-type Snapshot = Pick<typeof state, 'day' | 'night' | 'spawn' | 'portal' | 'keys' | 'switches'>
+type Snapshot = Pick<typeof state, 'day' | 'night' | 'spawn' | 'portal' | 'keys' | 'switches' | 'obstacles'>
 
 function getSaves(): Record<string, Snapshot> {
   try {
@@ -199,9 +243,9 @@ function getSaves(): Record<string, Snapshot> {
 }
 
 function saveAs(name: string) {
-  const { day, night, spawn, portal, keys, switches } = state
+  const { day, night, spawn, portal, keys, switches, obstacles } = state
   const saves = getSaves()
-  saves[name] = { day, night, spawn, portal, keys, switches }
+  saves[name] = { day, night, spawn, portal, keys, switches, obstacles }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(saves))
   refreshSaveList(name)
   saveStatus.textContent = `saved "${name}" at ${new Date().toLocaleTimeString()}`
@@ -214,8 +258,10 @@ function applySnapshot(snap: Snapshot) {
   state.portal = snap.portal
   state.keys = snap.keys
   state.switches = snap.switches
+  state.obstacles = snap.obstacles ?? []
   state.cursor = { ...state.spawn }
   state.activeSwitch = null
+  state.activeObstacle = null
   render()
 }
 
@@ -269,6 +315,7 @@ function buildScene(): Scene {
       day: state.switches.day.map((s) => ({ col: s.col, row: s.row, bridge: s.bridge.map((b) => ({ ...b })) })),
       night: state.switches.night.map((s) => ({ col: s.col, row: s.row, bridge: s.bridge.map((b) => ({ ...b })) })),
     },
+    obstacles: state.obstacles.map((o) => ({ ...o })),
   }
 }
 
@@ -286,6 +333,8 @@ function serialize(): string {
   const pt = (p: Pt) => `{ col: ${p.col}, row: ${p.row} }`
   const bridge = (b: { col: number; row: number; night: boolean }) => `{ col: ${b.col}, row: ${b.row}, night: ${b.night} }`
   const sw = (s: SwitchDef) => `{ col: ${s.col}, row: ${s.row}, bridge: [${s.bridge.map(bridge).join(', ')}] }`
+  const obstacle = (o: ObstacleDef) =>
+    `{ col: ${o.col}, row: ${o.row}, range: ${o.range}, axis: '${o.axis}'${o.speed === undefined ? '' : `, speed: ${o.speed}`}${o.night === undefined ? '' : `, night: ${o.night}`} }`
   const portalNight = state.portal.night === undefined ? '' : `, night: ${state.portal.night}`
   return `{
   spawn: { col: ${state.spawn.col}, row: ${state.spawn.row} },
@@ -298,6 +347,7 @@ ${lines(toRows(state.night))}
   portal: { col: ${state.portal.col}, row: ${state.portal.row}${portalNight} },
   keys: { day: [${state.keys.day.map(pt).join(', ')}], night: [${state.keys.night.map(pt).join(', ')}] },
   switches: { day: [${state.switches.day.map(sw).join(', ')}], night: [${state.switches.night.map(sw).join(', ')}] },
+  obstacles: [${state.obstacles.map(obstacle).join(', ')}],
 }`
 }
 
@@ -313,6 +363,7 @@ const spawnLabel = document.querySelector<HTMLSpanElement>('#spawnLabel')!
 const portalLabel = document.querySelector<HTMLSpanElement>('#portalLabel')!
 const keyList = document.querySelector<HTMLUListElement>('#keyList')!
 const switchList = document.querySelector<HTMLUListElement>('#switchList')!
+const obstacleList = document.querySelector<HTMLUListElement>('#obstacleList')!
 const output = document.querySelector<HTMLTextAreaElement>('#output')!
 const loadSelect = document.querySelector<HTMLSelectElement>('#loadSelect')!
 const saveStatus = document.querySelector<HTMLSpanElement>('#saveStatus')!
@@ -408,6 +459,22 @@ function render() {
 
   state.switches[state.mode].forEach((s) => drawCell(CELL_SWITCH, s.col * DISPLAY, s.row * DISPLAY))
 
+  state.obstacles.forEach((o, idx) => {
+    if (o.night !== undefined && o.night !== night) return
+    const ow = CELL_OBSTACLE.w * DISPLAY
+    const oh = CELL_OBSTACLE.h * DISPLAY
+    ctx.globalAlpha = idx === state.activeObstacle ? 1 : 0.6
+    drawCell(CELL_OBSTACLE, o.col * DISPLAY + (DISPLAY - ow) / 2, o.row * DISPLAY + (DISPLAY - oh) / 2, ow, oh)
+    ctx.globalAlpha = 1
+    ctx.strokeStyle = idx === state.activeObstacle ? '#f0f' : '#f0f8'
+    ctx.lineWidth = 1
+    if (o.axis === 'x') {
+      ctx.strokeRect((o.col - o.range) * DISPLAY, o.row * DISPLAY, (o.range * 2 + 1) * DISPLAY, DISPLAY)
+    } else {
+      ctx.strokeRect(o.col * DISPLAY, (o.row - o.range) * DISPLAY, DISPLAY, (o.range * 2 + 1) * DISPLAY)
+    }
+  })
+
   if (state.portal.night === undefined || state.portal.night === night) drawCell(CELL_PORTAL, state.portal.col * DISPLAY, state.portal.row * DISPLAY)
 
   ctx.strokeStyle = '#ffd54a'
@@ -442,12 +509,22 @@ function render() {
       switchList.appendChild(li)
     }),
   )
+
+  obstacleList.innerHTML = ''
+  state.obstacles.forEach((o, idx) => {
+    const li = document.createElement('li')
+    const isActive = idx === state.activeObstacle
+    if (isActive) li.className = 'active'
+    const lock = o.night === undefined ? '' : o.night ? ' (night only)' : ' (day only)'
+    li.textContent = `col ${o.col}, row ${o.row} — ${o.axis} range ${o.range}${lock}${isActive ? ' *' : ''}`
+    obstacleList.appendChild(li)
+  })
 }
 
 window.addEventListener('keydown', (e) => {
   const el = document.activeElement
   if (el === loadSelect || el === output || el === saveName || el === saveList) return
-  const brushKeys: Record<string, Brush> = { '1': 'tile', '2': 'spawn', '3': 'key', '4': 'portal', '5': 'switch', '6': 'bridge' }
+  const brushKeys: Record<string, Brush> = { '1': 'tile', '2': 'spawn', '3': 'key', '4': 'portal', '5': 'switch', '6': 'bridge', '7': 'obstacle' }
   if (e.key in brushKeys) {
     state.brush = brushKeys[e.key]!
     render()
@@ -468,6 +545,12 @@ window.addEventListener('keydown', (e) => {
     case 'D': copyModeGrid(); break
     case 'p':
     case 'P': cyclePortalNight(); break
+    case 'x':
+    case 'X': cycleObstacleAxis(); break
+    case '[': adjustObstacleRange(-1); break
+    case ']': adjustObstacleRange(1); break
+    case 'o':
+    case 'O': cycleObstacleNight(); break
     case 'c':
     case 'C': navigator.clipboard.writeText(output.value); break
     case 's':

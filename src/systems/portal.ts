@@ -1,5 +1,5 @@
 import { TILE_W, GRID_H, MAP, STAGES, stageIndex, activeScene, advanceStage, spawnPoint } from '../components/map.ts'
-import { player, respawnPortal, respawnPlatforms, respawnKeys, respawnSwitches, respawnObstacles, allKeysCollected, ended, endGame } from '../state.ts'
+import { player, respawnPortal, respawnPlatforms, respawnKeys, respawnSwitches, respawnObstacles, respawnDecorations, allKeysCollected, ended, endGame } from '../state.ts'
 import { night } from './night.ts'
 import { onLand } from './squash.ts'
 import { isFading, startFade } from './fade.ts'
@@ -29,6 +29,7 @@ export function createUpdatePortal() {
       respawnKeys()
       respawnSwitches()
       respawnObstacles()
+      respawnDecorations()
       const p = spawnPoint()
       player.x = p.x
       player.y = p.y

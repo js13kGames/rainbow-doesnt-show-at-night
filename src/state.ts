@@ -1,4 +1,4 @@
-import { TILE_W, GRID_H, TILE_DIRT, activeScene } from './components/map.ts'
+import { TILE_W, GRID_H, TILE_DIRT, activeScene, decorationSpots } from './components/map.ts'
 
 type Cell = { x: number; y: number; w?: number; h?: number }
 
@@ -26,6 +26,20 @@ export const OBSTACLE_R2 = (16 * 2.5) / 2
 export const SWITCH_CELL = { x: 2, y: 0, w: 1, h: 1 }
 export const SWITCH_STEPPED_CELL = { x: 3, y: 0, w: 1, h: 1 }
 export const BRIDGE_CELL = { x: 3, y: 1, w: 1, h: 1 }
+
+// decoration art (flowers, bushes): small icons on the atlas (see scripts/flower.ts and
+// scripts/bushes.ts for their pixel boxes), each converted from an inclusive pixel box to cell
+// units (px/16) like KEY_CELL, with r/r2 derived the same way as KEY_R/KEY_R2 but per-icon
+// since these aren't all the same pixel size
+const spriteFromBox = (x0: number, y0: number, x1: number, y1: number) => {
+  const w = x1 - x0 + 1
+  const h = y1 - y0 + 1
+  return { cell: { x: x0 / 16, y: y0 / 16, w: w / 16, h: h / 16 }, r: (w * 2.5) / 2, r2: (h * 2.5) / 2 }
+}
+// day-only: scripts/flower.ts
+const FLOWER_SPRITES = [spriteFromBox(32, 24, 34, 31), spriteFromBox(36, 26, 38, 31), spriteFromBox(40, 24, 42, 31), spriteFromBox(44, 24, 46, 31)]
+// night-only: scripts/bushes.ts
+const BUSH_SPRITES = [spriteFromBox(0, 53, 4, 63), spriteFromBox(6, 51, 9, 63), spriteFromBox(12, 57, 14, 63)]
 
 // only one moving entity exists (the player), so its "components" are just plain fields
 // true once the final stage's portal has been reached — freezes the stage-advance loop so the
@@ -118,7 +132,7 @@ export function activeBridgeTiles(isNight: boolean): Set<string> {
   return tiles
 }
 
-export type ObstacleEnt = { x0: number; y0: number; range: number; axis: 'x' | 'y'; speed: number; t: number; x: number; y: number }
+export type ObstacleEnt = { x0: number; y0: number; range: number; axis: 'x' | 'y'; speed: number; t: number; x: number; y: number; night: boolean | undefined }
 export let obstacles: ObstacleEnt[] = []
 
 export function respawnObstacles() {
@@ -126,8 +140,51 @@ export function respawnObstacles() {
     const x = o.col * TILE_W + TILE_W / 2
     const y = o.row * GRID_H + GRID_H / 2
     const range = o.range * (o.axis === 'x' ? TILE_W : GRID_H)
-    return { x0: x, y0: y, range, axis: o.axis, speed: o.speed ?? 1, t: 0, x, y }
+    return { x0: x, y0: y, range, axis: o.axis, speed: o.speed ?? 1, t: 0, x, y, night: o.night }
   })
+}
+
+// decorative flowers (day-only) and bushes (night-only), grown in patches across grass tops
+// each time a stage loads — `night` picks which side a given decoration shows on, same
+// convention as KeyEnt/SwitchEnt, since day and night maps can have different tile layouts
+export type Decoration = { x: number; y: number; r: number; r2: number; cell: Cell; night: boolean }
+export let decorations: Decoration[] = []
+// run-length clumping instead of an independent coin-flip per tile — reads as patches of
+// growth separated by bare ground, not dust scattered evenly across the whole floor
+const CLUMP_CHANCE = 0.4
+const runLength = (min: number, span: number) => min + Math.floor(Math.random() * span)
+
+const scatter = (map: number[][], sprites: { cell: Cell; r: number; r2: number }[], night: boolean): Decoration[] => {
+  const decos: Decoration[] = []
+  let inClump = Math.random() < CLUMP_CHANCE
+  let remaining = inClump ? runLength(2, 3) : runLength(2, 4)
+  let spots = decorationSpots(map)
+  // bushes cluster into one tight patch instead of scattering across the whole map
+  if (night) {
+    const width = Math.min(spots.length, runLength(4, 5))
+    const start = Math.floor(Math.random() * Math.max(1, spots.length - width))
+    spots = spots.slice(start, start + width)
+  }
+  spots.forEach(({ col, row }) => {
+    if (remaining-- === 0) {
+      inClump = !inClump
+      remaining = inClump ? runLength(2, 3) : runLength(2, 4)
+    }
+    if (!inClump) return
+    const { cell, r, r2 } = sprites[Math.floor(Math.random() * sprites.length)]!
+    // random spot anywhere inside the tile's own bounds (clamped so the sprite doesn't poke
+    // past the tile edge), not pinned to the tile center — off-grid so a patch doesn't look
+    // like a row of icons
+    const x = col * TILE_W + r + Math.random() * (TILE_W - 2 * r)
+    const y = row * GRID_H + r2 + Math.random() * (GRID_H - 2 * r2)
+    decos.push({ x, y, r, r2, cell, night })
+  })
+  return decos
+}
+
+export function respawnDecorations() {
+  const { day, night } = activeScene()
+  decorations = [...scatter(day, FLOWER_SPRITES, false), ...scatter(night, BUSH_SPRITES, true)]
 }
 
 export type PlatformTile = { x: number; y: number; cell: Cell }

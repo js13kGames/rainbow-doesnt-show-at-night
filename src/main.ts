@@ -12,7 +12,7 @@ import { initNightToggle, updateNightFade } from './systems/night.ts'
 import { createUpdatePortal } from './systems/portal.ts'
 import { updateFade } from './systems/fade.ts'
 import { MAP, spawnPoint } from './components/map.ts'
-import { player, spawnPlayer, respawnPlatforms, respawnPortal, respawnKeys, respawnSwitches, respawnObstacles } from './state.ts'
+import { player, spawnPlayer, respawnPlatforms, respawnPortal, respawnKeys, respawnSwitches, respawnObstacles, respawnDecorations } from './state.ts'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!
 
@@ -32,6 +32,7 @@ respawnPortal()
 respawnKeys()
 respawnSwitches()
 respawnObstacles()
+respawnDecorations()
 spawnPlayer(spawnX, spawnY)
 player.cell = { x: 0, y: 0 }
 

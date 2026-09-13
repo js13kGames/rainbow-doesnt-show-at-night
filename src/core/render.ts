@@ -4,10 +4,12 @@ import { colorT, night } from '../systems/night.ts'
 import { fade, shrinkPlayer, deathDir } from '../systems/fade.ts'
 import { idleFrame, IDLE_STEP } from '../systems/wobble.ts'
 import { pushText, textWidth } from '../components/text.ts'
+import { OBSTACLE_RENDER_OY } from '../systems/obstacle.ts'
 import {
   player,
   portal,
   platforms,
+  decorations,
   keys,
   switches,
   obstacles,
@@ -70,6 +72,7 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
     })
     // r2 omitted below (platforms/portal are square, so it just falls back to r in the renderer)
     platforms.forEach((p) => sprites.push({ x: p.x + offsetX, y: p.y + offsetY, r: TILE_R, cell: p.cell }))
+    decorations.forEach((d) => d.night === night && sprites.push({ x: d.x + offsetX, y: d.y + offsetY, r: d.r, r2: d.r2, cell: d.cell }))
     switches.forEach((s) => {
       // switch icon only shows on its own side; each bridge tile shows on whichever side it
       // targets, independent of the switch's own side (see state.ts activeBridgeTiles)
@@ -93,7 +96,11 @@ export function createRender(renderer: ReturnType<typeof createRenderer>, canvas
           })
         })
     })
-    obstacles.forEach((o) => sprites.push({ x: o.x + offsetX, y: o.y + offsetY, r: OBSTACLE_R, r2: OBSTACLE_R2, cell: OBSTACLE_CELL }))
+    obstacles.forEach((o, i) => {
+      if (o.night !== undefined && o.night !== night) return
+      const frame = idleFrame(performance.now() * 0.001 + i * IDLE_STEP)
+      sprites.push({ x: o.x + offsetX, y: o.y + offsetY + OBSTACLE_RENDER_OY, rotation: frame.rot, r: OBSTACLE_R, r2: OBSTACLE_R2 * frame.sy, cell: OBSTACLE_CELL })
+    })
     keys.forEach((k) => {
       // floats above the tile center, bobbing up/down in sync across all keys
       const bob = Math.sin(performance.now() * 0.003) * 4 - 8
